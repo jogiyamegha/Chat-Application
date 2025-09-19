@@ -39,10 +39,9 @@ const ResponseStatus = (function () {
 const TableNames = (function() {
     function TableNames() {};
     TableNames.User = 'users';
-    TableNames.GroupChat = 'groupchats';
-    TableNames.GroupMessage = 'groupmessages';
+    TableNames.ChatRoom = 'chatrooms';
+    TableNames.Message = 'messages';
     TableNames.SocketUsers = 'socketusers';
-
     return TableNames;
 })();
 
@@ -58,6 +57,9 @@ const TableFields = (function () {
     TableFields.active = 'active';
     TableFields.isAdmin = 'isAdmin'; 
     TableFields.createdBy = 'createdBy';
+    TableFields.personalChatRoomDetails = 'personalChatRoomDetails';
+    TableFields.receiverId = 'receiverId';
+    TableFields.groupDetails = 'groupDetails';
     TableFields.groupName = 'groupName';
     TableFields.description = 'description';
     TableFields.participants = 'participants';
@@ -70,16 +72,22 @@ const TableFields = (function () {
     TableFields.lastMsgId = 'lastMsgId';
     TableFields.message = 'message';
     TableFields.senderName = 'senderName';
-    TableFields.chatGroupId = 'chatGroupId';
+    TableFields.chatRoomId = 'chatRoomId';
+    TableFields.isGroupMessage = 'isGroupMessage';
     TableFields.senderDetails = 'senderDetails';
     TableFields.senderId = 'senderId';
     TableFields.messageType = 'messageType';
+    TableFields.receivedBy = 'receivedBy';
     TableFields.seenBy = 'seenBy';
+    TableFields.reaction = 'reaction';
     TableFields.deleted = 'deleted';
     TableFields.chatType = 'chatType';
     TableFields.isOnline = 'isOnline';
     TableFields.socketId = 'socketId';
     TableFields.participantId = 'participantId';
+    TableFields.personalChatId = 'personalChatId';
+    TableFields.chatName = 'chatName';
+    TableFields.isGroup = 'isGroup';
     TableFields.createdAt = 'createdAt';
     TableFields.updatedAt = 'updatedAt';
 
@@ -113,13 +121,14 @@ const ValidationMsgs = (function () {
     ValidationMsgs.CannotDeleteOthersMsg = "You can't delete other's message!";
     ValidationMsgs.DataOff = 'You are offline, please on data to send message!';
     ValidationMsgs.LastMsgUserIdEmpty = 'Last message UserId required!';
-    ValidationMsgs.ChatGroupIdEmpty = 'ChatGroupId required!';
+    ValidationMsgs.ChatRoomIdEmpty = 'ChatRoomId required!';
     ValidationMsgs.MessageTypeEmpty = 'MessageType Required';
     ValidationMsgs.UserExists = 'User with this emailId already exists!';
     ValidationMsgs.UserNotFound = 'User Not Found!';
     ValidationMsgs.ParticipantsEmpty = 'Participants required!';
     ValidationMsgs.ParticipantNotExistInGroup = 'This Participant Not Exist In Group';
     ValidationMsgs.NotGroupMember = 'You can not send message as you are not group member';
+    ValidationMsgs.IsGroupEmpty = 'group or not?';
     
     return ValidationMsgs;
 })();

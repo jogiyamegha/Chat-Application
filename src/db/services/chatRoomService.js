@@ -1,13 +1,14 @@
 const { TableFields, ValidationMsgs } = require('../../utils/constants');
-const UserService = require('../services/userService');
+const UserService = require('./userService');
 const ValidationError = require('../../utils/ValidationError');
-const GroupChat = require('../models/groupChat');
+const ChatRoom = require('../models/chatRoom');
 const { MongoUtil } = require('../mongoose');
+const ChatRoom = require('../models/chatRoom');
 
-const GroupChatService = class {
-    static getGroupById =  ( groupId ) => {
+const ChatRoomService = class {
+    static getChatRoomById =  ( groupId ) => {
         return new ProjectionBuilder(async function (){
-            return await GroupChat.findOne(
+            return await ChatRoom.findOne(
                 {
                     [TableFields.ID] : MongoUtil.toObjectId(groupId)
                 }
@@ -16,7 +17,7 @@ const GroupChatService = class {
     }
 
     static updateRemoved = async (chatGroupId, participant) => {
-        await GroupChat.findByIdAndUpdate(
+        await ChatRoom.findByIdAndUpdate(
             chatGroupId,
             {
                 $set: {
@@ -32,7 +33,7 @@ const GroupChatService = class {
     }
 
     static updateLastMsg = async (chatGroupId, lastMsgId, lastMsgSenderId, lastMsgSenderName, lastMsg) => {
-        return await GroupChat.updateOne(
+        return await ChatRoom.updateOne(
             {
                 [TableFields.ID] : chatGroupId
             },
@@ -51,7 +52,7 @@ const GroupChatService = class {
 
     static existsParticipant =  (groupId, participantId) => {
         return new ProjectionBuilder(async function() {
-            return await GroupChat.findOne(
+            return await ChatRoom.findOne(
                 {
                     [TableFields.ID] : groupId,
                     [TableFields.participants + '.' + TableFields.userId] : participantId
@@ -61,7 +62,7 @@ const GroupChatService = class {
     }
 
     static addToParticipantsArray = async (participant, groupId) => {
-        await GroupChat.findByIdAndUpdate(
+        await ChatRoom.findByIdAndUpdate(
             groupId, 
             {
                 $push: {
@@ -76,7 +77,7 @@ const GroupChatService = class {
 
     static addParticipant = async (userId, chatGroupId) => {
         const user = await UserService.getUserById(userId).withBasicInfo().execute();
-        await GroupChat.findByIdAndUpdate(
+        await ChatRoom.findByIdAndUpdate(
             chatGroupId, 
             {
                 $push: {
@@ -93,7 +94,7 @@ const GroupChatService = class {
     }
 
     static removeFromRemovedParticipants = async (userId, groupId) => {
-        const group = await GroupChatService.getGroupById(groupId).withBasicInfo().execute();
+        const group = await ChatRoomService.getGroupById(groupId).withBasicInfo().execute();
 
         const removedParticipantsArray = group[TableFields.removedParticipants];
         console.log(removedParticipantsArray);
@@ -111,7 +112,7 @@ const GroupChatService = class {
             const userRemoved = removedParticipantsArray[participantIndex];
             console.log("userRemoved ss", userRemoved);
 
-            return await GroupChat.updateOne(
+            return await ChatRoom.updateOne(
                 {
                     [TableFields.ID] : groupId
                 },
@@ -126,7 +127,7 @@ const GroupChatService = class {
 
     static removeParticipantsFromGroup = async ( groupId, participant ) => {
 
-        const group = await GroupChatService.getGroupById(groupId).withBasicInfo().execute();
+        const group = await ChatRoomService.getGroupById(groupId).withBasicInfo().execute();
         if(!group) {
             throw new ValidationError(ValidationMsgs.RecordNotFound);
         }
@@ -143,7 +144,7 @@ const GroupChatService = class {
         const userRemoved = groupParticipant[participantIndex];
         console.log(userRemoved);
 
-        await GroupChat.updateOne(
+        await ChatRoom.updateOne(
             {
                 [TableFields.ID] : groupId
             },
@@ -159,7 +160,7 @@ const GroupChatService = class {
             }
         )
 
-        return await GroupChat.updateOne(
+        return await ChatRoom.updateOne(
             {
                 [TableFields.ID] : groupId
             }, 
@@ -175,7 +176,7 @@ const GroupChatService = class {
     }
 
     static updateParticipantsCount = async (groupId, participantCount) => {
-        await GroupChat.findByIdAndUpdate(
+        await ChatRoom.findByIdAndUpdate(
             groupId,
             {
                 [TableFields.participantsCount] : participantCount
@@ -183,18 +184,40 @@ const GroupChatService = class {
         )
     }
     
-    static insertRecord = async (updatedRoomFields = {}) => {
-        var group = new GroupChat({
+    static insertGroupRecord = async (updatedRoomFields = {}) => {
+        var chatRoom = new ChatRoom({
             ...updatedRoomFields,
         })
     
-        let error = group.validateSync();
+        let error = chatRoom.validateSync();
         if(error) {
             throw error;
         } else {
             let createdRoomRecord = undefined;
             try {
-                return await group.save();
+                return await chatRoom.save();
+                // return { createdRoomRecord };
+            } catch (e) {
+                if(createdRoomRecord){
+                    await createdRoomRecord.delete()
+                }
+                throw e;
+            }
+        }
+    }
+
+    static insertPersonalChatRecord = async (updatedRoomFields = {}) => {
+                var personalChatRoom = new ChatRoom({
+            ...updatedRoomFields,
+        })
+    
+        let error = personalChatRoom.validateSync();
+        if(error) {
+            throw error;
+        } else {
+            let createdRoomRecord = undefined;
+            try {
+                return await personalChatRoom.save();
                 // return { createdRoomRecord };
             } catch (e) {
                 if(createdRoomRecord){
@@ -205,27 +228,20 @@ const GroupChatService = class {
         }
     }
 }
-
+ 
 const ProjectionBuilder = class {
     constructor(methodToExecute) {
         const projection =  {};
         this.withBasicInfo = () => {
             projection[TableFields.ID] = 1;
-            projection[TableFields.profilePicture] = 1;
-            projection[TableFields.groupName] = 1;
-            projection[TableFields.description] = 1;
+            projection[TableFields.isGroup] = 1;
+            projection[TableFields.groupDetails] = 1;
             projection[TableFields.participants] = 1;
             projection[TableFields.participantsCount] = 1;
+            projection[TableFields.lastMessage] = 1;
             projection[TableFields.removedParticipants] = 1;
             return this; 
         };
-        // this.withRemovedDetails = () => {
-        //     projection[TableFields.c]
-        // }
-        this.withName = () => {
-            projection[TableFields.groupName] = 1;
-            return this;
-        }
         this.withId = () => {
             projection[TableFields.ID] = 1;
             return this;
@@ -237,4 +253,4 @@ const ProjectionBuilder = class {
     }
 }
 
-module.exports = GroupChatService;
+module.exports = ChatRoomService;

@@ -1,13 +1,12 @@
 const SocketUsersController = require('./controllers/SocketUsers/socketUsersController');
-const GroupChatController = require('./controllers/GroupChat/groupChatController');
+const ChatRoomController = require('./controllers/ChatRoom/chatRoomController');
 const UserController = require('./controllers/User/userController');
-const GroupMessageController = require('./controllers/GroupMessage/groupMessageController');
+const MessageController = require('./controllers/Message/messageController');
 const UserService = require('./db/services/userService');
 const { verifySocketToken } = require('./middlewares/socketAuth');
 const { TableFields, ValidationMsgs } = require('./utils/constants');
 const ValidationError = require('./utils/ValidationError');
 const SocketUsersService = require('./db/services/socketUsersService');
-
 
 module.exports = function (io) {
     io.on('connection', async (socket) => {
@@ -40,36 +39,38 @@ module.exports = function (io) {
 
         // socket.on('sendPersonalMessage', async ({ receiverId, chatType , message }, ack =() => {}) => {
         //     try {
-        //         const { decoded, error } = verifySocketToken(socket)
-                
-        //         if(error) {
-        //             socket.emit('authError', { message : error });
-        //             console.log('Authentication Failed!');
-        //             return ack({success : false, error : "Auth_failed"});
-        //         }
-
         //         const senderId = decoded[TableFields.ID];
+
 
         //         const req = {
         //             body : { senderName, receiverId, receiverName, chatType, message }
         //         }
 
-        //         const roomId = [ senderId, receiverId ].sort().join('-');
-        //         socket.join(roomId);
-        //         console.log('roomId: : :', roomId);
+        //         const socketUser = await SocketUsersService.getSocketUserById(senderId).withBasicInfo().execute();
+        //         const isOnline = socketUser[TableFields.isOnline];
+
+        //         if(!isOnline) {
+        //             return socket.emit('onlineErr', 'Please get Online!')
+        //         } else {
+                    
+        //         }
+
+        //         // const roomId = [ senderId, receiverId ].sort().join('-');
+        //         // socket.join(roomId);
+        //         // console.log('roomId: : :', roomId);
                 
-        //         await ChatMsgController.sendMessage(req, senderId);
+        //         // await ChatMsgController.sendMessage(req, senderId);
 
-        //         const msgToNum = encodeToNumbers(message);
-        //         const numToMsg = decodeFromNumbers(msgToNum)
+        //         // const msgToNum = encodeToNumbers(message);
+        //         // const numToMsg = decodeFromNumbers(msgToNum)
 
-        //         socket.to(roomId).emit('messageReceived', { roomId, senderId, senderName, receiverId, receiverName, chatType, message : numToMsg  })
-        //         // socket.emit('sendUserMessage', {"success" : true, "message" : "Message sent successfully!"});
-        //         ack({
-        //             'acknowledgment': 'Message sent successfully',
-        //             'success' : true, 
-        //             message: msgToNum
-        //         })
+        //         // socket.to(roomId).emit('messageReceived', { roomId, senderId, senderName, receiverId, receiverName, chatType, message : numToMsg  })
+        //         // // socket.emit('sendUserMessage', {"success" : true, "message" : "Message sent successfully!"});
+        //         // ack({
+        //         //     'acknowledgment': 'Message sent successfully',
+        //         //     'success' : true, 
+        //         //     message: msgToNum
+        //         // })
             
         //     } catch (error) {
         //         throw error
@@ -87,16 +88,14 @@ module.exports = function (io) {
                 const senderId = decoded[TableFields.ID];
                 
                 await SocketUsersController.updateOnlineStatus(senderId);
-                ack({
-                    'acknowledgement' : 'You are online now, can start conversation'
-                })
+                ack({success : true, message : 'You are online now...'})
 
             } catch (error) {
                 throw error;
             }
         })
 
-        socket.on('createGroup', async( { groupName, description, participants = [] },ack = () => {} ) => {
+        socket.on('createChatRoom', async( { isGroup, receiverId, groupName, description, participants = [] },ack = () => {} ) => {
             try{
                 const userId = decoded[TableFields.ID];
                 const socketUser = await SocketUsersService.getSocketUserById(userId).withBasicInfo().execute();
@@ -119,16 +118,16 @@ module.exports = function (io) {
     
                     const req = {
                         body : {
-                            groupName, description, participants : participantIds
+                            isGroup, receiverId, groupName, description, participants : participantIds
                         }
                     }
     
-                    const group = await GroupChatController.createGroup(userId, req);
+                    const group = await ChatRoomController.createChatRoom(userId, req);
                     
-                    ack({success : true, message : `Group created successfully`})
+                    ack({success : true, message : `chat room created successfully`})
     
                     if(group) {
-                        await GroupChatController.updateParticipantsCount(group);
+                        await ChatRoomController.updateParticipantsCount(group);
                     }
                 }
 
@@ -174,7 +173,7 @@ module.exports = function (io) {
             if(!isOnline) {
                 return socket.emit('onlineErr', 'Please get Online!')
             } else {
-                const isGroupMember = await GroupChatController.checkGroupMemberOrNot(chatGroupId, userId);
+                const isGroupMember = await ChatRoomController.checkGroupMemberOrNot(chatGroupId, userId);
                 
                 if(isGroupMember) {
                     return socket.emit('groupMember', 'You already exists in group!');
@@ -184,7 +183,7 @@ module.exports = function (io) {
                     body : { chatGroupId }
                 }
 
-                await GroupChatController.joinToGroup(req, userId);
+                await ChatRoomController.joinToGroup(req, userId);
                 socket.emit('joinGroupSuccess', 'Group joined successfully!');
             }
         })
@@ -216,7 +215,7 @@ module.exports = function (io) {
             }
         })
 
-        socket.on('sendMessage', async({ chatGroupId, message, messageType }, { ack = () => {} }) => {
+        socket.on('sendMessage', async({ chatRoomId, message, messageType }, { ack = () => {} }) => {
             const senderId = decoded[TableFields.ID];
 
             const socketUser = await SocketUsersService.getSocketUserById(senderId).withBasicInfo().execute();
@@ -226,21 +225,21 @@ module.exports = function (io) {
                 return socket.emit('onlineErr', 'Please get Online!')
             } else {
 
-                const isGroupMember = await GroupChatController.checkGroupMemberOrNot(chatGroupId, senderId);
+                const isGroupMember = await ChatRoomController.checkGroupMemberOrNot(chatGroupId, senderId);
                 if(!isGroupMember) {
                     return socket.emit('unAuthorized', 'sorry You are not member of this group, so can not send message!')
                 }
                 
                 const req = {
-                    body : { chatGroupId, message, messageType }
+                    body : { chatRoomId, message, messageType }
                 }
-                const msg = await GroupMessageController.sendMessage(senderId, req);
-                await GroupMessageController.updateSeenBy(senderId, chatGroupId);
-                await GroupChatController.updateLastMessage(msg, chatGroupId ,senderId, req);
+                const msg = await MessageController.sendMessage(senderId, req);
+                await MessageController.updateSeenBy(senderId, chatGroupId);
+                await ChatRoomController.updateLastMessage(msg, chatGroupId ,senderId, req);
     
                 /***** For receiving message *******/
 
-                const groupMembers = await GroupChatController.getGroupMembers(chatGroupId);
+                const groupMembers = await ChatRoomController.getGroupMembers(chatGroupId);
                 
                 let onlineUsers = [];
     
@@ -272,7 +271,7 @@ module.exports = function (io) {
         //             chatGroupId
         //         }
         //     }
-        //     await GroupChatController.rejoinMember( userId, req )
+        //     await ChatRoomController.rejoinMember( userId, req )
         // }) 
 
         socket.on('makeOtherParticipantAdmin', async ({ chatGroupId, participantId}) => {
@@ -285,7 +284,7 @@ module.exports = function (io) {
                 const req = {
                     body : { chatGroupId, participantId }
                 }
-                await GroupChatController.makeOtherParticipantToAdmin(userId, req);
+                await ChatRoomController.makeOtherParticipantToAdmin(userId, req);
             }
         })
 
@@ -296,8 +295,8 @@ module.exports = function (io) {
             if(!isOnline) {
                 return socket.emit('onlineErr', 'Please get Online!')
             } else {
-                const isGroupMember = await GroupChatController.checkGroupMemberOrNot(chatGroupId, userId);
-                const isPastMember = await GroupChatController.checkIsPastMember(chatGroupId, userId);
+                const isGroupMember = await ChatRoomController.checkGroupMemberOrNot(chatGroupId, userId);
+                const isPastMember = await ChatRoomController.checkIsPastMember(chatGroupId, userId);
                 console.log('isPastMember',isPastMember);
                 if(isGroupMember == false && isPastMember == false) {
                     return socket.emit('unAuthorized', 'Ops, sorry You can not read message!')
@@ -310,7 +309,7 @@ module.exports = function (io) {
                 const limit = socket.handshake.query.limit;
                 const skip = socket.handshake.query.skip;
 
-                const chat = await GroupMessageController.showMessage(userId, req, limit, skip);
+                const chat = await MessageController.showMessage(userId, req, limit, skip);
 
                 socket.emit('chatHistory', chat );
             }
@@ -325,7 +324,7 @@ module.exports = function (io) {
             if(!isOnline) {
                 return socket.emit('onlineErr', 'Please get Online!')
             } else {
-                const isGroupMember = await GroupChatController.checkGroupMemberOrNot(chatGroupId, userId);
+                const isGroupMember = await ChatRoomController.checkGroupMemberOrNot(chatGroupId, userId);
                 if(!isGroupMember) {
                     return socket.emit('unAuthorized', 'failed')
                 } else {
@@ -334,7 +333,7 @@ module.exports = function (io) {
                         body : { chatGroupId }
                     };
                     
-                    await GroupChatController.exitFromGroup(req, userId)
+                    await ChatRoomController.exitFromGroup(req, userId)
                 } 
             }
         })

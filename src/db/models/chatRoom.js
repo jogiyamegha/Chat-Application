@@ -2,25 +2,39 @@ const mongoose = require('mongoose');
 const { TableFields, TableNames, ValidationMsgs } = require('../../utils/constants');
 const {getUrl, Folders} = require("../../utils/storage");
 
-const groupChatSchema = new mongoose.Schema(
+const chatRoomSchema = new mongoose.Schema(
     {
-        [TableFields.createdBy] : {
-            type : mongoose.Types.ObjectId,
-            ref : TableNames.User,
-            required : [true, ValidationMsgs.CreatedByEmpty],
+        [TableFields.isGroup] : {
+            type: Boolean,
+            default : false,
+            required : [true, ValidationMsgs.IsGroupEmpty]
         },
-        [TableFields.groupName] : {
-            type : String,
-            trim : true,
-            required : [true, ValidationMsgs.GroupNameEmpty],
+        [TableFields.personalChatRoomDetails] : {
+            [TableFields.userId]  : {
+                type : mongoose.Types.ObjectId,
+                ref : TableNames.User
+            },
+            [TableFields.receiverId] : {
+                type : mongoose.Types.ObjectId,
+                ref : TableNames.User
+            }
         },
-        [TableFields.description] : {
-            type : String,
-            trim : true,
-            required : [true, ValidationMsgs.DescriptionEmpty]
-        },
-        [TableFields.profilePicture] : {
-            type : String, 
+        [TableFields.groupDetails] : {
+            [TableFields.groupName] : {
+                type : String,
+                trim : true
+            },
+            [TableFields.createdBy] : {
+                type : mongoose.Types.ObjectId,
+                ref : TableNames.User,
+            },
+            [TableFields.description] : {
+                type : String,
+                trim : true,
+            },
+            [TableFields.profilePicture] : {
+                type : String, 
+            },
         },
         [TableFields.participants] : [
             {
@@ -38,7 +52,6 @@ const groupChatSchema = new mongoose.Schema(
                 },
                 [TableFields.joinedAt] : {
                     type : Date,
-                    default : Date.now()
                 },
             }
         ],
@@ -49,7 +62,7 @@ const groupChatSchema = new mongoose.Schema(
         [TableFields.lastMessage] : {
             [TableFields.lastMsgId] : {
                 type : mongoose.Types.ObjectId,
-                ref : TableNames.GroupMessage
+                ref : TableNames.Message
             },
             [TableFields.message] : {
                 type : String,
@@ -62,13 +75,13 @@ const groupChatSchema = new mongoose.Schema(
             [TableFields.senderId] : {
                 type : mongoose.Types.ObjectId,
                 ref : TableNames.User
-            }
+            },
         },
         [TableFields.removedParticipants] : [
             {
                 [TableFields.participantId] : {
                     type : mongoose.Types.ObjectId,
-                    ref : TableNames.GroupChat
+                    ref : TableNames.ChatRoom
                 }, 
                 [TableFields.name_] : {
                     type: String,
@@ -87,8 +100,6 @@ const groupChatSchema = new mongoose.Schema(
         timestamps : true,
         toJSON : {
             transform : function (doc, ret) {
-                delete ret[TableFields.tokens];
-                delete ret[TableFields.password];
                 delete ret.createdAt;
                 delete ret.updatedAt;
                 if (ret.hasOwnProperty([TableFields.profilePicture])) {
@@ -100,5 +111,5 @@ const groupChatSchema = new mongoose.Schema(
     }
 );
 
-const GroupChat = mongoose.model(TableNames.GroupChat, groupChatSchema);
-module.exports = GroupChat;
+const chatRoom = mongoose.model(TableNames.ChatRoom, chatRoomSchema);
+module.exports = chatRoom;

@@ -1,12 +1,16 @@
 const mongoose = require('mongoose');
 const {MessageTypes, TableFields, TableNames, ValidationMsgs } = require('../../utils/constants');
 
-const groupMessageSchema = new mongoose.Schema(
+const messageSchema = new mongoose.Schema(
     {
-        [TableFields.chatGroupId] : {
+        [TableFields.chatRoomId] : {
             type : mongoose.Types.ObjectId,
-            ref : TableNames.User,
-            required : [true, ValidationMsgs.ChatGroupIdEmpty],
+            ref : TableNames.ChatRoom,
+            required : [true, ValidationMsgs.ChatRoomIdEmpty],
+        },
+        [TableFields.isGroupMessage] : {
+            type : Boolean,
+            default : false
         },
         [TableFields.senderDetails] :{
             [TableFields.ID] : false,
@@ -31,6 +35,15 @@ const groupMessageSchema = new mongoose.Schema(
             enum : Object.values(MessageTypes),
             required : [true, ValidationMsgs.MessageTypeEmpty],
         },
+        [TableFields.receivedBy] : [
+            {
+                [TableFields.ID] : false,
+                [TableFields.userId] : {
+                    type : mongoose.Types.ObjectId,
+                    ref : TableNames.User
+                }
+            }
+        ],
         [TableFields.seenBy] : [
             {
                 [TableFields.ID] : false,
@@ -40,6 +53,10 @@ const groupMessageSchema = new mongoose.Schema(
                 }
             }
         ],
+        [TableFields.reaction] : {
+            type : Number,
+            enum : Object
+        },
         [TableFields.deleted] : {
             type : Boolean,
             default : false
@@ -62,5 +79,5 @@ const groupMessageSchema = new mongoose.Schema(
     }
 );
 
-const GroupMessage = mongoose.model(TableNames.GroupMessage, groupMessageSchema);
-module.exports = GroupMessage;
+const message = mongoose.model(TableNames.Message, messageSchema);
+module.exports = message;

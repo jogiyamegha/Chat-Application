@@ -1,9 +1,9 @@
 const { TableFields } = require('../../utils/constants');
-const GroupMessage = require('../models/groupMessage');
+const GroupMessage = require('../models/message');
 
 const { MongoUtil } = require('../mongoose');
 
-const GroupMessageService = class {
+const MessageService = class {
 
     static getAllMessages = async ( chatGroupId, createdAt, leftAt, skip, limit) => {
         skip = skip || 0;
@@ -93,4 +93,4 @@ const GroupMessageService = class {
     }
 }
 
-module.exports = GroupMessageService;
+module.exports = MessageService;

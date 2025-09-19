@@ -1,5 +1,5 @@
-const GroupMessageService = require('../../db/services/groupMessageService');
-const GroupChatService = require('../../db/services/groupChatService');
+const MessageService = require('../../db/services/messageService');
+const ChatRoomService = require('../../db/services/chatRoomService');
 const UserService = require('../../db/services/userService');
 const { TableFields, ValidationMsgs } = require('../../utils/constants');
 const ValidationError = require('../../utils/ValidationError');
@@ -12,7 +12,7 @@ exports.sendMessage = async ( senderId, req ) => {
         reqBody,
         undefined,
         async (updatedMessageFields) => {
-            return await GroupMessageService.insertRecord(
+            return await MessageService.insertRecord(
                 updatedMessageFields
             )
         }
@@ -21,19 +21,19 @@ exports.sendMessage = async ( senderId, req ) => {
 }
 
 exports.updateSeenBy = async (senderId, chatGroupId) => {
-    const group = await GroupChatService.getGroupById(chatGroupId).withBasicInfo().execute();
+    const group = await ChatRoomService.getGroupById(chatGroupId).withBasicInfo().execute();
     const lastMsgId = group[TableFields.lastMessage][TableFields.lastMsgId];
     const lastMsgUserId = group[TableFields.lastMessage][TableFields.senderId];
 
     if(lastMsgUserId != senderId) {
-        await GroupMessageService.addToSeenBy(chatGroupId, senderId)
+        await MessageService.addToSeenBy(chatGroupId, senderId)
     }
 }
 
 exports.showMessage = async (userId, req, limit, skip ) => {
     const reqBody = req.body;
     const chatGroupId = reqBody[TableFields.chatGroupId];
-    const group = await GroupChatService.getGroupById(chatGroupId).withBasicInfo().execute();
+    const group = await ChatRoomService.getGroupById(chatGroupId).withBasicInfo().execute();
     
     console.log(group[TableFields.createdAt]);
 
@@ -57,7 +57,7 @@ exports.showMessage = async (userId, req, limit, skip ) => {
         throw new ValidationError(ValidationMsgs.RecordNotFound);
     } else {
         
-        return await GroupMessageService.getAllMessages(chatGroupId, createdAt, leftAt, limit, skip);
+        return await MessageService.getAllMessages(chatGroupId, createdAt, leftAt, limit, skip);
     }   
 }
 
@@ -79,15 +79,15 @@ async function parseAndValidateMessage(
 
     const sender = await UserService.getUserById(senderId).withDetails().execute();
 
-    const chatGroupId = reqBody[TableFields.chatGroupId];
-    const chatGroup = await GroupChatService.getGroupById(chatGroupId).withId().execute();
-    if(!chatGroup) {
+    const chatRoomId = reqBody[TableFields.chatRoomId];
+    const chatRoom = await ChatRoomService.getChatRoomById(chatRoomId).withId().execute();
+    if(!chatRoom) {
         throw new ValidationError(ValidationMsgs.RecordNotFound);
     }
 
     try {
         let response = await onValidationCompleted({
-            [TableFields.chatGroupId] : reqBody[TableFields.chatGroupId],
+            [TableFields.chatRoomId] : reqBody[TableFields.chatRoomId],
             [TableFields.senderDetails] : {
                 [TableFields.senderId] : sender[TableFields.ID],
                 [TableFields.senderName] : sender[TableFields.name_]
