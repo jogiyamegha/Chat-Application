@@ -1,0 +1,202 @@
+const GroupChatService = require('../../db/services/groupChatService');
+const GroupMessageService = require('../../db/services/groupMessageService');
+const UserService = require('../../db/services/userService');
+const { TableFields, ValidationMsgs } = require('../../utils/constants');
+const ValidationError = require('../../utils/ValidationError');
+
+exports.createGroup = async (userId, req) => {
+    const reqBody = req.body;
+
+    let record = await parseAndValidateGroup(
+        userId,
+        reqBody, 
+        undefined,
+        async (updatedGroupFields) => {
+            return await GroupChatService.insertRecord(
+                updatedGroupFields
+            );
+        }
+    )
+    return record;
+}
+
+exports.joinToGroup = async(req, userId) => {
+    const reqBody = req.body;
+    const chatGroupId = reqBody[TableFields.chatGroupId];
+
+    const group = await GroupChatService.getGroupById(chatGroupId).withBasicInfo().execute();
+
+    if(!group) {
+        throw new ValidationError(ValidationMsgs.RecordNotFound);
+    }  else {
+        await GroupChatService.addParticipant(userId, chatGroupId);
+        await GroupChatService.removeFromRemovedParticipants(userId, chatGroupId);
+    }
+}
+ 
+exports.rejoinMember = async (userId, req) => {
+    const user = await UserService.getUserById(userId).withBasicInfo().execute();
+    if(!user) {
+        throw new ValidationError(ValidationMsgs.RecordNotFound);
+    }
+    const reqBody = req.body;
+
+    const chatGroupId = reqBody[TableFields.chatGroupId];
+
+    const group = await GroupChatService.getGroupById(chatGroupId).withBasicInfo().execute();
+
+    const allRemovedParticipants = group[TableFields.removedParticipants];
+    for(let i = 0; i < allRemovedParticipants.length; i++) {
+        console.log(allRemovedParticipants[i][TableFields.ID]);
+        if(allRemovedParticipants[i][TableFields.participantId].toString() === userId.toString()) {
+            await GroupChatService.updateRemoved(chatGroupId, allRemovedParticipants[i])
+        }
+    }
+}
+
+exports.makeOtherParticipantToAdmin = async(userId, req) => {
+    const reqBody = req.body;
+    const chatGroupId = reqBody[TableFields.chatGroupId];
+    const participantId = reqBody[TableFields.participantId];
+
+    const user = await UserService.getUserById(userId).withBasicInfo().execute();
+    if(!user) {
+        throw new ValidationError(ValidationMsgs.UserNotFound);
+    }
+
+    const group = await GroupChatService.getGroupById(chatGroupId).withBasicInfo().execute();
+
+    const groupParticipants = group[TableFields.participants]
+}
+
+exports.updateLastMessage = async (msg, chatGroupId, senderId, req) => {
+    const lastMsgId = msg[TableFields.ID];
+    const lastMsgSenderId = msg[TableFields.senderDetails][TableFields.senderId];
+    const lastMsgSenderName = msg[TableFields.senderDetails][TableFields.senderName];
+    const lastMsg = msg[TableFields.message];
+
+    await GroupChatService.updateLastMsg(chatGroupId, lastMsgId, lastMsgSenderId, lastMsgSenderName, lastMsg);
+
+    const user = await UserService.getUserById(senderId).withBasicInfo().execute();
+
+    await GroupMessageService.updateSeenMsgDefault(lastMsgId, chatGroupId, senderId);
+}
+
+exports.checkGroupMemberOrNot = async (chatGroupId, userId) => {
+    const group = await GroupChatService.getGroupById(chatGroupId).withBasicInfo().execute();
+    const allParticipants = group[TableFields.participants];
+
+    for (let i = 0; i < allParticipants.length; i++) {
+        if (allParticipants[i][TableFields.userId].toString() === userId.toString()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+exports.checkIsPastMember = async (chatGroupId, userId) => {
+    const group = await GroupChatService.getGroupById(chatGroupId).withBasicInfo().execute();
+    const allRemovedParticipants = group[TableFields.removedParticipants] || 0;
+    console.log(allRemovedParticipants , allRemovedParticipants.length);
+
+    for(let i = 0; i < allRemovedParticipants.length; i++) {
+        console.log(allRemovedParticipants[i][TableFields.ID]);
+        if(allRemovedParticipants[i][TableFields.participantId].toString() === userId.toString()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+exports.updateParticipantsCount = async (group) => {
+    const groupId = group[TableFields.ID];
+    const participants = group[TableFields.participants];
+
+    const participantCount = participants.length;
+    await GroupChatService.updateParticipantsCount(groupId, participantCount);
+}
+
+exports.getGroupMembers = async (chatGroupId) => {
+    const group = await GroupChatService.getGroupById(chatGroupId).withBasicInfo().execute();
+    return group[TableFields.participants];
+}
+
+exports.exitFromGroup = async (req, userId) => {
+    const reqBody = req.body;
+    const chatGroupId = reqBody[TableFields.chatGroupId];
+    const group = await GroupChatService.getGroupById(chatGroupId).withBasicInfo().execute();
+    const groupParticipants = group[TableFields.participants];
+
+    for(let i = 0; i < groupParticipants.length; i++){
+        const participantsIds = groupParticipants[i][TableFields.userId];
+
+        if(participantsIds.toString() === userId.toString()){
+            await GroupChatService.removeParticipantsFromGroup(chatGroupId, participantsIds);
+            return; 
+        }
+    }
+    // return false;
+}
+
+async function parseAndValidateGroup(
+    userId,
+    reqBody,
+    existingGroup = {},
+    onValidationCompleted = async () => {}
+) {
+    if(isFieldEmpty(reqBody[TableFields.groupName]), existingGroup[TableFields.groupName]){
+        throw new ValidationError(ValidationMsgs.GroupNameEmpty);
+    }
+    if(isFieldEmpty(reqBody[TableFields.description]), existingGroup[TableFields.description]){
+        throw new ValidationError(ValidationMsgs.DescriptionEmpty);
+    }
+    if(!Array.isArray(reqBody[TableFields.participants] || reqBody[TableFields.participants].length === 0)){
+        throw new ValidationError(ValidationMsgs.ParticipantsEmpty)
+    }
+  
+    const participantDetails = await Promise.all(
+        reqBody[TableFields.participants].map(async (participantId) => {
+            const user = await UserService.getUserById(participantId).withBasicInfo().execute();
+            if(!user){
+                throw new ValidationError(ValidationMsgs.UserNotFound);
+            }
+            return {
+                [TableFields.userId] : user[TableFields.ID],
+                [TableFields.name_] : user[TableFields.name_],
+                [TableFields.joinedAt] : Date.now(),
+                [TableFields.isAdmin] : participantId === userId
+            }
+        })
+    )
+
+    const uniqueParticipants = Array.from(
+        new Map(participantDetails.map(p => [p[TableFields.userId], p])).values()
+    );
+
+
+    const admin = await UserService.getUserById(userId).withBasicInfo().execute()
+
+    const participantId = reqBody[TableFields.participants];
+    const participant = await UserService.getUserById(participantId).withBasicInfo().execute();
+
+    try {
+        let response = await onValidationCompleted({
+            [TableFields.createdBy] : userId,
+            [TableFields.groupName] : reqBody[TableFields.groupName],
+            [TableFields.description] : reqBody[TableFields.description],
+            [TableFields.participants] : uniqueParticipants
+        })
+        return response;
+    } catch (error) {
+        throw error;
+    }
+}
+
+function isFieldEmpty(providedField, existingField) {
+    if (providedField != undefined) {
+        return false;
+    } else if (existingField) {
+        return false;
+    }
+    return true;
+}
