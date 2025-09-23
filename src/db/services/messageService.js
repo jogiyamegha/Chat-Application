@@ -1,5 +1,5 @@
 const { TableFields } = require('../../utils/constants');
-const GroupMessage = require('../models/message');
+const Message = require('../models/message');
 
 const { MongoUtil } = require('../mongoose');
 
@@ -37,11 +37,20 @@ const MessageService = class {
         ).select('message senderDetails').sort({ createdAt : 1}).limit(parseInt(limit)).skip(parseInt(skip));
     }
 
-    static updateSeenMsgDefault = async (lastMsgId, chatGroupId, senderId) => {
-        return await GroupMessage.updateOne(
+    static getChatHistory = async (chatRoomId) => {
+        return await Message.find(
+            {
+                [TableFields.chatRoomId] : chatRoomId
+            }
+        )
+    }
+    
+
+    static updateSeenMsgDefault = async (lastMsgId, chatRoomId, senderId) => {
+        return await Message.updateOne(
             {
                 [TableFields.ID] : MongoUtil.toObjectId(lastMsgId),
-                [TableFields.chatGroupId] : chatGroupId,
+                [TableFields.chatRoomId] : chatRoomId,
                 [`${TableFields.seenBy}.${TableFields.userId}`] : { $ne: MongoUtil.toObjectId(senderId)}
             },
             {
@@ -71,7 +80,7 @@ const MessageService = class {
     }
 
     static insertRecord = async (updatedRoomFields = {}) => {
-        var message = new GroupMessage({
+        var message = new Message({
             ...updatedRoomFields,
         })
     

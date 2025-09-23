@@ -67,8 +67,8 @@ async function parseAndValidateMessage(
     existingMessage = {},
     onValidationCompleted = async () => {}
 ) {
-    if(isFieldEmpty(reqBody[TableFields.chatGroupId]), existingMessage[TableFields.chatGroupId]){
-        throw new ValidationError(ValidationMsgs.ChatGroupIdEmpty);
+    if(isFieldEmpty(reqBody[TableFields.chatRoomId]), existingMessage[TableFields.chatRoomId]){
+        throw new ValidationError(ValidationMsgs.ChatRoomIdEmpty);
     }
     if(isFieldEmpty(reqBody[TableFields.message]), existingMessage[TableFields.message]){
         throw new ValidationError(ValidationMsgs.MessageEmpty);
@@ -88,16 +88,15 @@ async function parseAndValidateMessage(
     try {
         let response = await onValidationCompleted({
             [TableFields.chatRoomId] : reqBody[TableFields.chatRoomId],
+            [TableFields.isGroupMessage] : chatRoom[TableFields.isGroup],
             [TableFields.senderDetails] : {
                 [TableFields.senderId] : sender[TableFields.ID],
                 [TableFields.senderName] : sender[TableFields.name_]
             },
             [TableFields.message] : reqBody[TableFields.message],
             [TableFields.messageType] : reqBody[TableFields.messageType],
-            [TableFields.seenBy] : {
-                [TableFields.userId] : sender[TableFields.ID]
-            }
         })
+        console.log(response);
         return response;
     } catch(error) {
         throw error;

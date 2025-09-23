@@ -10,6 +10,14 @@ const MessageTypes = (function() {
     return MessageTypes;
 })();
 
+const Reaction = (function() {
+    function Reaction() {};
+    Reaction.Like = 1;
+    Reaction.Smily = 2;
+    Reaction.Angry = 3;
+    return Reaction;
+})();
+
 const InterfaceTypes = (function() {
     function InterfaceTypes() {};
     InterfaceTypes.Admin = {
@@ -80,7 +88,8 @@ const TableFields = (function () {
     TableFields.receivedBy = 'receivedBy';
     TableFields.seenBy = 'seenBy';
     TableFields.reaction = 'reaction';
-    TableFields.deleted = 'deleted';
+    TableFields.deleteForMe = 'deleteForMe';
+    TableFields.deleteForEveryone = 'deleteForEveryone';
     TableFields.chatType = 'chatType';
     TableFields.isOnline = 'isOnline';
     TableFields.socketId = 'socketId';
@@ -129,12 +138,14 @@ const ValidationMsgs = (function () {
     ValidationMsgs.ParticipantNotExistInGroup = 'This Participant Not Exist In Group';
     ValidationMsgs.NotGroupMember = 'You can not send message as you are not group member';
     ValidationMsgs.IsGroupEmpty = 'group or not?';
-    
+    ValidationMsgs.NotGroup = 'it is not a group';
+    ValidationMsgs.ParticipantAlreadyExists = 'Participant AlreadyExists'
     return ValidationMsgs;
 })();
 
 module.exports = {
     MessageTypes,
+    Reaction,
     InterfaceTypes,
     ResponseStatus,
     TableFields,

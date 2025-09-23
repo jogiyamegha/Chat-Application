@@ -57,10 +57,14 @@ const messageSchema = new mongoose.Schema(
             type : Number,
             enum : Object
         },
-        [TableFields.deleted] : {
+        [TableFields.deleteForMe] : {
             type : Boolean,
             default : false
-        }         
+        },
+        [TableFields.deleteForEveryone] : {
+            type : Boolean,
+            default : false
+        }        
     },
     {
         timestamps : true,

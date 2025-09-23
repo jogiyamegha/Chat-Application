@@ -94,7 +94,14 @@ const chatRoomSchema = new mongoose.Schema(
                     type : Date, 
                 }
             }
-        ]
+        ],
+        [TableFields.clearChat] : {
+            type: Boolean,
+            default: false
+        },
+        [TableFields.clearChatTime] : {
+            type: Date
+        }
     },
     {
         timestamps : true,

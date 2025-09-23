@@ -1,3 +1,4 @@
+const ChatRoom = require('../../db/models/chatRoom');
 const ChatRoomService = require('../../db/services/chatRoomService');
 const MessageService = require('../../db/services/messageService');
 const UserService = require('../../db/services/userService');
@@ -36,6 +37,32 @@ exports.createChatRoom = async (userId, req) => {
     }
 }
 
+exports.addParticipantsToGroup = async (chatRoomId, req) => {
+    const reqBody = req.body;
+
+    const participantsToAdd = reqBody[TableFields.participants];
+    const chatRoom = await ChatRoomService.getChatRoomById(chatRoomId).withBasicInfo().execute();
+    const existingParticipants = chatRoom[TableFields.participants];
+
+    for(let i = 0; i < participantsToAdd.length; i++) {
+        const checkParticipantExists = await ChatRoomService.existsParticipant(chatRoomId, participantsToAdd[i]);
+        if(checkParticipantExists) {
+            throw new ValidationError(ValidationMsgs.ParticipantAlreadyExists)
+        } else {
+            const participantDetail = await UserService.getUserById(participantsToAdd[i]).withBasicInfo().execute();
+            const participant = {
+                [TableFields.userId] : participantDetail[TableFields.ID],
+                [TableFields.name_] : participantDetail[TableFields.name_],
+                [TableFields.isAdmin] : false,
+                [TableFields.joinedAt] : Date.now()
+
+            }
+            await ChatRoomService.addToParticipantsArray(participant, chatRoomId)
+        }
+
+    }
+} 
+
 // exports.createGroup = async (userId, req) => {
 //     const reqBody = req.body;
 
@@ -54,16 +81,10 @@ exports.createChatRoom = async (userId, req) => {
 
 exports.joinToGroup = async(req, userId) => {
     const reqBody = req.body;
-    const chatGroupId = reqBody[TableFields.chatGroupId];
-
-    const group = await ChatRoomService.getGroupById(chatGroupId).withBasicInfo().execute();
-
-    if(!group) {
-        throw new ValidationError(ValidationMsgs.RecordNotFound);
-    }  else {
-        await ChatRoomService.addParticipant(userId, chatGroupId);
-        await ChatRoomService.removeFromRemovedParticipants(userId, chatGroupId);
-    }
+    const chatGroupId = reqBody[TableFields.chatRoomId];
+   
+    await ChatRoomService.addParticipant(userId, chatGroupId);
+    await ChatRoomService.removeFromRemovedParticipants(userId, chatGroupId);
 }
  
 exports.rejoinMember = async (userId, req) => {
@@ -88,7 +109,7 @@ exports.rejoinMember = async (userId, req) => {
 
 exports.makeOtherParticipantToAdmin = async(userId, req) => {
     const reqBody = req.body;
-    const chatGroupId = reqBody[TableFields.chatGroupId];
+    const chatRoomId = reqBody[TableFields.chatRoomId];
     const participantId = reqBody[TableFields.participantId];
 
     const user = await UserService.getUserById(userId).withBasicInfo().execute();
@@ -96,26 +117,42 @@ exports.makeOtherParticipantToAdmin = async(userId, req) => {
         throw new ValidationError(ValidationMsgs.UserNotFound);
     }
 
-    const group = await ChatRoomService.getGroupById(chatGroupId).withBasicInfo().execute();
+    const group = await ChatRoomService.getChatRoomById(chatRoomId).withBasicInfo().execute();
+    
+    return await ChatRoom.updateOne(
+        {
+            [TableFields.ID]: chatRoomId,
+            [TableFields.participants]: {
+                $elemMatch: {
+                    [TableFields.userId]: participantId
+                }
+            }
+        },
+        {
+            $set: {
+                [`${TableFields.participants}.$.${TableFields.isAdmin}`]: true
+            }
+        }
+    );
 
-    const groupParticipants = group[TableFields.participants]
+
 }
 
-exports.updateLastMessage = async (msg, chatGroupId, senderId, req) => {
+exports.updateLastMessage = async (msg, chatRoomId, senderId, req) => {
     const lastMsgId = msg[TableFields.ID];
     const lastMsgSenderId = msg[TableFields.senderDetails][TableFields.senderId];
     const lastMsgSenderName = msg[TableFields.senderDetails][TableFields.senderName];
     const lastMsg = msg[TableFields.message];
 
-    await ChatRoomService.updateLastMsg(chatGroupId, lastMsgId, lastMsgSenderId, lastMsgSenderName, lastMsg);
+    await ChatRoomService.updateLastMsg(chatRoomId, lastMsgId, lastMsgSenderId, lastMsgSenderName, lastMsg);
 
     const user = await UserService.getUserById(senderId).withBasicInfo().execute();
 
-    await MessageService.updateSeenMsgDefault(lastMsgId, chatGroupId, senderId);
+    await MessageService.updateSeenMsgDefault(lastMsgId, chatRoomId, senderId);
 }
 
 exports.checkGroupMemberOrNot = async (chatGroupId, userId) => {
-    const group = await ChatRoomService.getGroupById(chatGroupId).withBasicInfo().execute();
+    const group = await ChatRoomService.getChatRoomById(chatGroupId).withBasicInfo().execute();
     const allParticipants = group[TableFields.participants];
 
     for (let i = 0; i < allParticipants.length; i++) {

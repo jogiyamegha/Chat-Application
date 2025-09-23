@@ -7,6 +7,8 @@ const { verifySocketToken } = require('./middlewares/socketAuth');
 const { TableFields, ValidationMsgs } = require('./utils/constants');
 const ValidationError = require('./utils/ValidationError');
 const SocketUsersService = require('./db/services/socketUsersService');
+const ChatRoomService = require('./db/services/chatRoomService');
+const MessageService = require('./db/services/messageService');
 
 module.exports = function (io) {
     io.on('connection', async (socket) => {
@@ -136,7 +138,7 @@ module.exports = function (io) {
             }
         })
 
-        socket.on('addParticipants', async ( { groupId, participants = [] } ) => {
+        socket.on('addParticipants', async ( { chatRoomId, participants = [] } ) => {
             const userId = decoded[TableFields.ID];
             const socketUser = await SocketUsersService.getSocketUserById(userId).withBasicInfo().execute();
             const isOnline = socketUser[TableFields.isOnline];
@@ -145,42 +147,49 @@ module.exports = function (io) {
                 return socket.emit('onlineErr', 'Please get Online!')
             } else {
                 const req = {
-                    body : { groupId, participants }
+                    body : { chatRoomId, participants }
                 }
     
-                const user = await UserService.getUserById(userId).withBasicInfo().withId().execute();
-                if(!user) {
-                    throw new ValidationError(ValidationMsgs.UserNotFound);
-                }
-    
-                const isAdmin = user[TableFields.isAdmin];
-                console.log("user", user);
+                const chatRoom = await ChatRoomService.getChatRoomById(chatRoomId).withBasicInfo().execute();
+                const isGroup = chatRoom[TableFields.isGroup];
 
-                if(!isAdmin) {
-                    socket.emit('unAuthorized', 'You are not eligible to add participants')
+                const userIsAdmin = await ChatRoomService.checkUserIsAdmin(chatRoomId ,userId);    
+
+                if(!isGroup) { 
+                    return socket.emit('NotGroup', "Opps, it is not group so can not add participants")
                 } else {
-                    await UserController.addParticipantsToGroup(req);
-                    socket.emit('additionSuccess', `participants added successfully!`);
+
+                    if(!userIsAdmin) {
+                        socket.emit('unAuthorized', 'You are not eligible to add participants')
+                    } else {
+                        await ChatRoomController.addParticipantsToGroup(chatRoomId, req);
+                        socket.emit('additionSuccess', `participants added successfully!`);
+                    }
                 }
             }
         })
 
-        socket.on('joinGroup', async ({ chatGroupId }) => {
+        socket.on('joinGroup', async ({ chatRoomId }) => {
             const userId = decoded[TableFields.ID];
             const socketUser = await SocketUsersService.getSocketUserById(userId).withBasicInfo().execute();
             const isOnline = socketUser[TableFields.isOnline];
 
+            const chatRoom = await ChatRoomService.getChatRoomById(chatRoomId).withBasicInfo().execute();
+            const isGroup = chatRoom[TableFields.isGroup]
+
             if(!isOnline) {
                 return socket.emit('onlineErr', 'Please get Online!')
-            } else {
-                const isGroupMember = await ChatRoomController.checkGroupMemberOrNot(chatGroupId, userId);
+            } 
+            
+            if(isGroup){
+                const isGroupMember = await ChatRoomController.checkGroupMemberOrNot(chatRoomId, userId);
                 
                 if(isGroupMember) {
                     return socket.emit('groupMember', 'You already exists in group!');
                 }
 
                 const req = {
-                    body : { chatGroupId }
+                    body : { chatRoomId }
                 }
 
                 await ChatRoomController.joinToGroup(req, userId);
@@ -188,25 +197,27 @@ module.exports = function (io) {
             }
         })
 
-        socket.on('removeParticipants', async ({ groupId, participants }) => {
+        socket.on('removeParticipants', async ({ chatRoomId, participants }) => {
             const userId = decoded[TableFields.ID];
             const socketUser = await SocketUsersService.getSocketUserById(userId).withBasicInfo().execute();
             const isOnline = socketUser[TableFields.isOnline];
+
+            const chatRoom = await ChatRoomService.getChatRoomById(chatRoomId).withBasicInfo().execute();
+            const isGroup = chatRoom[TableFields.isGroup];
+
             if(!isOnline) {
                 return socket.emit('onlineErr', 'Please get Online!')
-            } else {
+            } 
+            
+            if(isGroup) {
                 const req = {
-                    body : { groupId, participants }
+                    body : { chatRoomId, participants }
                 }
     
-                const user = await UserService.getUserById(userId).withBasicInfo().withId().execute();
-                if(!user) {
-                    throw new ValidationError(ValidationMsgs.UserNotFound);
-                }
-    
-                const isAdmin = user[TableFields.isAdmin];
-                if(!isAdmin) {
-                    socket.emit('unAuthorized', 'You are not eligible to add participants');
+                const userIsAdmin = await ChatRoomService.checkUserIsAdmin(chatRoomId ,userId);    
+
+                if(!userIsAdmin) {
+                    socket.emit('unAuthorized', 'You are not eligible to remove participants');
                 } else {
                     await UserController.removeParticipantsFromGroup(req);
                     
@@ -224,9 +235,9 @@ module.exports = function (io) {
             if(!isOnline) {
                 return socket.emit('onlineErr', 'Please get Online!')
             } else {
-
-                const isGroupMember = await ChatRoomController.checkGroupMemberOrNot(chatGroupId, senderId);
-                if(!isGroupMember) {
+                const isParticipant = await ChatRoomService.checkIsParticipantOrNot(chatRoomId, senderId);
+                console.log("isParticipant", isParticipant);
+                if(!isParticipant) {
                     return socket.emit('unAuthorized', 'sorry You are not member of this group, so can not send message!')
                 }
                 
@@ -234,17 +245,18 @@ module.exports = function (io) {
                     body : { chatRoomId, message, messageType }
                 }
                 const msg = await MessageController.sendMessage(senderId, req);
-                await MessageController.updateSeenBy(senderId, chatGroupId);
-                await ChatRoomController.updateLastMessage(msg, chatGroupId ,senderId, req);
+                // await MessageController.updateSeenBy(senderId, chatGroupId);
+                await ChatRoomController.updateLastMessage(msg, chatRoomId ,senderId, req);
     
-                /***** For receiving message *******/
+                // /***** For receiving message *******/
 
-                const groupMembers = await ChatRoomController.getGroupMembers(chatGroupId);
+                const groupMembers = await ChatRoomController.getGroupMembers(chatRoomId);
                 
                 let onlineUsers = [];
     
                 for(let i = 0; i < groupMembers.length; i++){
                     const isOnline = await SocketUsersController.checkOnlineUser(groupMembers[i][TableFields.userId])
+                    console.log(isOnline);
                     if(isOnline === true) {
                         const socketId = await SocketUsersController.getSocketId(groupMembers[i][TableFields.userId]);
                         if (socketId) {
@@ -274,45 +286,84 @@ module.exports = function (io) {
         //     await ChatRoomController.rejoinMember( userId, req )
         // }) 
 
-        socket.on('makeOtherParticipantAdmin', async ({ chatGroupId, participantId}) => {
+        socket.on('makeOtherParticipantAdmin', async ({ chatRoomId, participantId}) => {
             const userId = decoded[TableFields.ID];
+            const user = await UserService.getUserById(userId).withBasicInfo().execute();
             const isOnline = await SocketUsersController.checkOnlineUser(userId);
 
-            if(!isOnline) {
-                return socket.emit('onlineErr', 'Please get Online!')
+            const chatRoom = await ChatRoomService.getChatRoomById(chatRoomId).withBasicInfo().execute();
+
+            const isGroup = chatRoom[TableFields.isGroup];
+
+            if(!isGroup) {
+                return socket.emit('NotGroup', "it is not a group")
             } else {
-                const req = {
-                    body : { chatGroupId, participantId }
+                if(!isOnline) {
+                    return socket.emit('onlineErr', 'Please get Online!')
+                } else {
+                    const req = {
+                        body : { chatRoomId, participantId }
+                    }
+                    await ChatRoomController.makeOtherParticipantToAdmin(userId, req);
+                    return socket.emit('OtherParticipantMakeAdminSuccess', `${user[TableFields.name_]} is also Admin Now!`)
                 }
-                await ChatRoomController.makeOtherParticipantToAdmin(userId, req);
             }
+
         })
 
-        socket.on('showGroupMessage', async({ chatGroupId }) => {
+        socket.on('showChatRoomMessage', async({ chatRoomId }) => {
             const userId = decoded[TableFields.ID];
-            const isOnline = await SocketUsersController.checkOnlineUser(userId);
 
-            if(!isOnline) {
-                return socket.emit('onlineErr', 'Please get Online!')
-            } else {
-                const isGroupMember = await ChatRoomController.checkGroupMemberOrNot(chatGroupId, userId);
-                const isPastMember = await ChatRoomController.checkIsPastMember(chatGroupId, userId);
-                console.log('isPastMember',isPastMember);
-                if(isGroupMember == false && isPastMember == false) {
-                    return socket.emit('unAuthorized', 'Ops, sorry You can not read message!')
-                }
-                
-                const req = {
-                    body : { chatGroupId }
-                }
-
-                const limit = socket.handshake.query.limit;
-                const skip = socket.handshake.query.skip;
-
-                const chat = await MessageController.showMessage(userId, req, limit, skip);
-
-                socket.emit('chatHistory', chat );
+            const isParticipant = await ChatRoomService.checkIsParticipant(chatRoomId, userId);
+            if(!isParticipant) {
+                return socket.emit('NotParticipant', 'You are not participant to show message');
             }
+
+            console.log(isParticipant);
+            const chatRoom = await ChatRoomService.getChatRoomById(chatRoomId).withBasicInfo().execute();
+            const isGroup = chatRoom[TableFields.isGroup];
+
+            if(!isGroup) {
+                const chat = await MessageService.getChatHistory(chatRoomId);
+                console.log(chat);
+                return socket.emit('chatHistory', chat)
+            }
+
+            // const isOnline = await SocketUsersController.checkOnlineUser(userId);
+
+            // if(!isOnline) {
+            //     return socket.emit('onlineErr', 'Please get Online!')
+            // } else {
+            //     const isGroupMember = await ChatRoomController.checkGroupMemberOrNot(chatRoomId, userId);
+            //     const isPastMember = await ChatRoomController.checkIsPastMember(chatRoomId, userId);
+            //     console.log('isPastMember',isPastMember);
+            //     if(isGroupMember == false && isPastMember == false) {
+            //         return socket.emit('unAuthorized', 'Ops, sorry You can not read message!')
+            //     }
+                
+            //     const req = {
+            //         body : { chatRoomId }
+            //     }
+
+            //     const limit = socket.handshake.query.limit;
+            //     const skip = socket.handshake.query.skip;
+
+            //     const chat = await MessageController.showMessage(userId, req, limit, skip);
+
+            //     socket.emit('chatHistory', chat );
+            // }
+        })
+
+        socket.on('clearChat', async ({chatRoomId}) => {
+            const userId = decoded[TableFields.ID];
+
+            const chatRoom = await ChatRoomService.getChatRoomById(chatRoomId).withBasicInfo().execute();
+            const isGroup = chatRoom[TableFields.isGroup];
+
+            if(!isGroup) {
+                
+            }
+
         })
 
         socket.on('exitGroup', async ( { chatGroupId } ) => {

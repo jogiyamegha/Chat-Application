@@ -3,9 +3,17 @@ const UserService = require('./userService');
 const ValidationError = require('../../utils/ValidationError');
 const ChatRoom = require('../models/chatRoom');
 const { MongoUtil } = require('../mongoose');
-const ChatRoom = require('../models/chatRoom');
+const { relativeTimeRounding } = require('moment');
 
 const ChatRoomService = class {
+
+    static chatRoomExists = async (chatRoomId) => {
+        return await ChatRoom.exists(
+            {
+                [TableFields.ID] : chatRoomId
+            }
+         )
+    }
     static getChatRoomById =  ( groupId ) => {
         return new ProjectionBuilder(async function (){
             return await ChatRoom.findOne(
@@ -14,6 +22,37 @@ const ChatRoomService = class {
                 }
             )
         })
+    } 
+
+    static checkUserIsAdmin = async (chatRoomId ,userId) => {
+        const chatRoom = await ChatRoomService.getChatRoomById(chatRoomId).withBasicInfo().execute();
+        const participants = chatRoom[TableFields.participants];
+        for(let p of participants) {
+            if(p[TableFields.userId].toString() === userId) {
+                return p[TableFields.isAdmin]
+            }
+        }
+    }
+
+    static checkIsParticipant = async (chatRoomId, senderId) => {
+        const chatRoom = await ChatRoomService.getChatRoomById(chatRoomId).withBasicInfo().execute();
+        const participantsArray = chatRoom[TableFields.participants];
+
+        for(let i of participantsArray) {
+            if(i[TableFields.userId].toString() === senderId) {
+                return true;
+            }
+        } 
+        return false;
+
+    }
+
+    static getChatHistory = async (chatGroupId) => {
+        return await ChatRoom.find(
+            {
+                [TableFields.ID] : chatGroupId
+            }
+        )
     }
 
     static updateRemoved = async (chatGroupId, participant) => {
@@ -50,18 +89,17 @@ const ChatRoomService = class {
         )
     }
 
-    static existsParticipant =  (groupId, participantId) => {
-        return new ProjectionBuilder(async function() {
-            return await ChatRoom.findOne(
+    static existsParticipant =  async (groupId, participantId) => {
+            return await ChatRoom.exists(
                 {
                     [TableFields.ID] : groupId,
                     [TableFields.participants + '.' + TableFields.userId] : participantId
                 }
             )
-        })
     }
 
     static addToParticipantsArray = async (participant, groupId) => {
+        console.log("kanu");
         await ChatRoom.findByIdAndUpdate(
             groupId, 
             {
@@ -94,12 +132,9 @@ const ChatRoomService = class {
     }
 
     static removeFromRemovedParticipants = async (userId, groupId) => {
-        const group = await ChatRoomService.getGroupById(groupId).withBasicInfo().execute();
+        const group = await ChatRoomService.getChatRoomById(groupId).withBasicInfo().execute();
 
         const removedParticipantsArray = group[TableFields.removedParticipants];
-        console.log(removedParticipantsArray);
-        console.log(removedParticipantsArray.length);
-
         if(removedParticipantsArray.length != 0) {
             const participantIndex = removedParticipantsArray.findIndex(
                 p => p[TableFields.participantId].toString() === userId.toString()
@@ -127,7 +162,7 @@ const ChatRoomService = class {
 
     static removeParticipantsFromGroup = async ( groupId, participant ) => {
 
-        const group = await ChatRoomService.getGroupById(groupId).withBasicInfo().execute();
+        const group = await ChatRoomService.getChatRoomById(groupId).withBasicInfo().execute();
         if(!group) {
             throw new ValidationError(ValidationMsgs.RecordNotFound);
         }
