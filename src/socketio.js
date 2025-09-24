@@ -235,7 +235,7 @@ module.exports = function (io) {
             if(!isOnline) {
                 return socket.emit('onlineErr', 'Please get Online!')
             } else {
-                const isParticipant = await ChatRoomService.checkIsParticipantOrNot(chatRoomId, senderId);
+                const isParticipant = await ChatRoomService.checkIsParticipant(chatRoomId, senderId);
                 console.log("isParticipant", isParticipant);
                 if(!isParticipant) {
                     return socket.emit('unAuthorized', 'sorry You are not member of this group, so can not send message!')
@@ -321,12 +321,16 @@ module.exports = function (io) {
 
             console.log(isParticipant);
             const chatRoom = await ChatRoomService.getChatRoomById(chatRoomId).withBasicInfo().execute();
-            const isGroup = chatRoom[TableFields.isGroup];
+            const isGroup = chatRoom[TableFields.isGroup]
+            if (!isGroup) {
+                let chat = [];
+                if (chatRoom[TableFields.clearChat] && chatRoom[TableFields.clearChatAt]) {
+                    chat = await MessageService.getChatHistory(chatRoom);
+                } else {
+                    chat = await MessageService.getChatHistory(chatRoom);
+                }
 
-            if(!isGroup) {
-                const chat = await MessageService.getChatHistory(chatRoomId);
-                console.log(chat);
-                return socket.emit('chatHistory', chat)
+                return socket.emit('chatHistory', chat);
             }
 
             // const isOnline = await SocketUsersController.checkOnlineUser(userId);
@@ -361,9 +365,8 @@ module.exports = function (io) {
             const isGroup = chatRoom[TableFields.isGroup];
 
             if(!isGroup) {
-                
+                await ChatRoomService.updateClearChat(chatRoomId)
             }
-
         })
 
         socket.on('exitGroup', async ( { chatGroupId } ) => {

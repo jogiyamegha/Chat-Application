@@ -37,14 +37,17 @@ const MessageService = class {
         ).select('message senderDetails').sort({ createdAt : 1}).limit(parseInt(limit)).skip(parseInt(skip));
     }
 
-    static getChatHistory = async (chatRoomId) => {
-        return await Message.find(
-            {
-                [TableFields.chatRoomId] : chatRoomId
-            }
-        )
+    static getChatHistory = async (chatRoom) => {
+        let query = { [TableFields.chatRoomId]: chatRoom._id };
+
+        if (chatRoom[TableFields.clearChat] && chatRoom[TableFields.clearChatAt]) {
+            // Only fetch messages after clearChatAt timestamp
+            query.createdAt = { $gt: chatRoom[TableFields.clearChatAt] };
+        }
+
+        return await Message.find(query).sort({ createdAt: 1 });
     }
-    
+
 
     static updateSeenMsgDefault = async (lastMsgId, chatRoomId, senderId) => {
         return await Message.updateOne(

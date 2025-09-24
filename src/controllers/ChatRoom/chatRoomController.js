@@ -186,7 +186,7 @@ exports.updateParticipantsCount = async (group) => {
 }
 
 exports.getGroupMembers = async (chatGroupId) => {
-    const group = await ChatRoomService.getGroupById(chatGroupId).withBasicInfo().execute();
+    const group = await ChatRoomService.getChatRoomById(chatGroupId).withBasicInfo().execute();
     return group[TableFields.participants];
 }
 

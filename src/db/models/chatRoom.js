@@ -99,7 +99,7 @@ const chatRoomSchema = new mongoose.Schema(
             type: Boolean,
             default: false
         },
-        [TableFields.clearChatTime] : {
+        [TableFields.clearChatAt] : {
             type: Date
         }
     },
