@@ -103,6 +103,26 @@ const ChatRoomService = class {
         )
     }
 
+    static updateClearChatForMe = async (chatRoomId, userId) => {
+    return await ChatRoom.updateOne(
+        {
+            [TableFields.ID]: chatRoomId,
+            [TableFields.participants]: {
+                $elemMatch: {
+                    [TableFields.userId]: userId
+                }
+            }
+        },
+        {
+            $set: {
+                [`${TableFields.participants}.$.${TableFields.clearChatForMe}`]: true,
+                [`${TableFields.participants}.$.${TableFields.clearChatForMeAt}`]: new Date()
+            }
+        }
+    );
+};
+
+
     static existsParticipant =  async (groupId, participantId) => {
             return await ChatRoom.exists(
                 {

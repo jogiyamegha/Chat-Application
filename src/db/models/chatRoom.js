@@ -53,6 +53,13 @@ const chatRoomSchema = new mongoose.Schema(
                 [TableFields.joinedAt] : {
                     type : Date,
                 },
+                [TableFields.clearChatForMe] : {
+                    type : Boolean,
+                    default : false
+                },
+                [TableFields.clearChatForMeAt] : {
+                    type : Date
+                }
             }
         ],
         [TableFields.participantsCount] : {

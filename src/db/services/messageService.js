@@ -1,4 +1,5 @@
 const { TableFields } = require('../../utils/constants');
+const chatRoom = require('../models/chatRoom');
 const Message = require('../models/message');
 
 const { MongoUtil } = require('../mongoose');
@@ -47,6 +48,27 @@ const MessageService = class {
 
         return await Message.find(query).sort({ createdAt: 1 });
     }
+
+    static getChatHistoryForMe = async (chatRoom, userId) => {
+        let query = { [TableFields.chatRoomId]: chatRoom._id };
+
+        // Find the logged-in user's participant object
+        const participant = chatRoom[TableFields.participants].find(
+            (p) => p[TableFields.userId].toString() === userId.toString()
+        );
+
+        // Apply clearChatForMe filter if it exists
+        if (
+            participant &&
+            participant[TableFields.clearChatForMe] &&
+            participant[TableFields.clearChatForMeAt]
+        ) {
+            query.createdAt = { $gt: participant[TableFields.clearChatForMeAt] };
+        }
+
+        return await Message.find(query).sort({ createdAt: 1 });
+    };
+
 
 
     static updateSeenMsgDefault = async (lastMsgId, chatRoomId, senderId) => {
