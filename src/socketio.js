@@ -615,6 +615,52 @@ module.exports = function (io) {
             }
         });
 
+        socket.on('editMessage', async({messageId, msg}, ack = () => {}) => {
+            const userId = await decoded[TableFields.ID];
+
+            const isMyMsg = await MessageService.checkIsMyMessage(userId, messageId);
+            if(isMyMsg == null) {
+                return socket.emit('notYourMessage', 'You can not edit this message as not your message');
+            }
+
+            const req = {
+                body : {
+                    messageId, 
+                    msg
+                }
+            }
+
+            return await MessageController.editMessage(req);
+        })
+
+        socket.on('deleteMessageForEveryone', async( {messageId, msg}, ack = () => {}) => {
+            const userId = await decoded[TableFields.ID];
+
+            const isMyMsg = await MessageService.checkIsMyMessage(userId, messageId);
+            if(isMyMsg == null) {
+                return socket.emit('notYourMessage', 'You can not Delete this message as not your message');
+            }
+            const req = {
+                body : {
+                    messageId, 
+                    msg
+                }
+            }
+
+            return await MessageController.deleteMessageForEveryone(req);
+        })
+
+        socket.on('deleteMessageForMe', async ( { messageId }, ack = () => {}) => {
+            const userId = await decoded[TableFields.ID];
+
+            const req = {
+                body  : {
+                    messageId
+                }
+            }
+            return await MessageController.deleteMessageForMe(req, userId);
+        })
+
         socket.on('makeOtherParticipantAdmin', async ({ chatRoomId, participantId }, ack = () => { }) => {
             try {
                 const userId = decoded[TableFields.ID];

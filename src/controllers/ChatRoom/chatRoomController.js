@@ -100,7 +100,6 @@ exports.rejoinMember = async (userId, req) => {
 
     const allRemovedParticipants = group[TableFields.removedParticipants];
     for(let i = 0; i < allRemovedParticipants.length; i++) {
-        console.log(allRemovedParticipants[i][TableFields.ID]);
         if(allRemovedParticipants[i][TableFields.participantId].toString() === userId.toString()) {
             await ChatRoomService.updateRemoved(chatGroupId, allRemovedParticipants[i])
         }
@@ -166,10 +165,8 @@ exports.checkGroupMemberOrNot = async (chatGroupId, userId) => {
 exports.checkIsPastMember = async (chatGroupId, userId) => {
     const group = await ChatRoomService.getGroupById(chatGroupId).withBasicInfo().execute();
     const allRemovedParticipants = group[TableFields.removedParticipants] || 0;
-    console.log(allRemovedParticipants , allRemovedParticipants.length);
 
     for(let i = 0; i < allRemovedParticipants.length; i++) {
-        console.log(allRemovedParticipants[i][TableFields.ID]);
         if(allRemovedParticipants[i][TableFields.participantId].toString() === userId.toString()) {
             return true;
         }

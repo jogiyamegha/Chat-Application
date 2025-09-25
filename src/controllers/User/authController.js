@@ -8,7 +8,6 @@ const { MongoUtil } = require('../../db/mongoose');
 exports.addUser = async (req) => {
     let providedFile = req.file || null;
     let reqBody = req.body;
-    console.log(providedFile);
 
     const createdUserRecords = await parseAndValidateUser(
         providedFile,
@@ -94,7 +93,6 @@ async function parseAndValidateUser(
                 true,
                 providedFile
             );
-            console.log("persistedImageKey", persistedImageKey);
         } catch (uploadError) {
             throw new Error("Failed to upload profile picture.");
         }

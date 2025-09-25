@@ -20,6 +20,28 @@ exports.sendMessage = async ( senderId, req ) => {
     return record;
 }
 
+exports.editMessage = async (req) => {
+    const msgId = req.body.messageId;
+    const msg = req.body.msg;
+
+    return await MessageService.editMessage(msgId, msg);
+}
+
+exports.deleteMessageForEveryone = async (req) => {
+    const msgId = req.body.messageId;
+    return await MessageService.deleteMessageForEveryone(msgId, msg);
+}
+
+exports.deleteMessageForMe = async (req, userId) => {
+    const messageId = req.body.messageId;
+    const msg = await MessageService.getMessageById(messageId).withBasicInfo().execute();
+    if (!msg) {
+        throw new ValidationError(ValidationMsgs.MessageNotExists);
+    }
+
+    return await MessageService.deleteMessageForMe(msg, userId);
+}
+
 exports.updateSeenBy = async (senderId, chatGroupId) => {
     const group = await ChatRoomService.getGroupById(chatGroupId).withBasicInfo().execute();
     const lastMsgId = group[TableFields.lastMessage][TableFields.lastMsgId];
@@ -35,22 +57,15 @@ exports.showMessage = async (userId, req, limit, skip ) => {
     const chatGroupId = reqBody[TableFields.chatGroupId];
     const group = await ChatRoomService.getGroupById(chatGroupId).withBasicInfo().execute();
     
-    console.log(group[TableFields.createdAt]);
 
     const removedParticipants = group[TableFields.removedParticipants];
-    console.log(removedParticipants);
-    console.log(Array.isArray(removedParticipants));
-    console.log(removedParticipants.length);
-
     let leftAt;
     for(let i = 0; i < removedParticipants.length; i++) {
-        console.log(removedParticipants[i][TableFields.participantId]);
         if(removedParticipants[i][TableFields.participantId].toString() === userId.toString()){
             leftAt = removedParticipants[i][TableFields.leftAt]
         }
     }
 
-    console.log("leftAt", leftAt);
     const createdAt = group[TableFields.createdAt];
     
     if(!group){
@@ -96,7 +111,6 @@ async function parseAndValidateMessage(
             [TableFields.message] : reqBody[TableFields.message],
             [TableFields.messageType] : reqBody[TableFields.messageType],
         })
-        console.log(response);
         return response;
     } catch(error) {
         throw error;

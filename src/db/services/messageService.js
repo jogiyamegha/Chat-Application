@@ -6,12 +6,21 @@ const { MongoUtil } = require('../mongoose');
 
 const MessageService = class {
 
+    static getMessageById =  (messageId) => {
+        return new ProjectionBuilder(
+            async function () {
+                return await Message.findOne(
+                    {
+                        [TableFields.ID] : messageId
+                    }
+                )
+            }
+        )
+    }
+
     static getAllMessages = async ( chatGroupId, createdAt, leftAt, skip, limit) => {
         skip = skip || 0;
-        limit = limit || 0;
-
-        console.log('object');
-       
+        limit = limit || 0;       
 
         // const filter = {
         // [TableFields.groupChatId]: MongoUtil.toObjectId(groupId),
@@ -36,6 +45,15 @@ const MessageService = class {
                 }
             }
         ).select('message senderDetails').sort({ createdAt : 1}).limit(parseInt(limit)).skip(parseInt(skip));
+    }
+
+    static checkIsMyMessage = async (userId, messageId) => {
+        return await Message.exists(
+            {
+                [TableFields.ID] : messageId,
+                [`${TableFields.senderDetails}.${TableFields.senderId}`] : userId
+            }
+        )
     }
 
     static getChatHistory = async (chatRoom) => {
@@ -67,6 +85,44 @@ const MessageService = class {
         }
 
         return await Message.find(query).sort({ createdAt: 1 });
+    };
+
+    static editMessage = async (msgId, msg) => {
+        return await Message.findByIdAndUpdate(
+            msgId,
+            {
+                [TableFields.message] : msg,
+                [TableFields.isEdited] : true           
+            }
+        )
+    }
+
+    static deleteMessageForEveryone = async (msgId) => {
+        return await Message.findByIdAndUpdate(
+            msgId,
+            {
+                [TableFields.deleteForEveryone] : true           
+            }
+        )
+    }
+
+    static deleteMessageForMe = async (msg, userId) => {
+        
+        const deleteForMeArray = msg[TableFields.deleteForMe] || [];
+
+        const alreadyExists = deleteForMeArray.some(
+            (entry) => entry[TableFields.userId].toString() === userId.toString()
+        );
+
+        if (!alreadyExists) {
+            msg[TableFields.deleteForMe].push({
+                [TableFields.userId]: userId,
+            });
+
+            await msg.save(); // persist to DB
+        }
+
+        return msg;
     };
 
 
@@ -124,6 +180,35 @@ const MessageService = class {
                 throw e;
             }
         }
+    }
+}
+
+const ProjectionBuilder = class {
+    constructor(methodToExecute) {
+        const projection =  {};
+        this.withBasicInfo = () => {
+            projection[TableFields.ID] = 1;
+            projection[TableFields.chatRoomId] = 1;
+            projection[TableFields.isGroupMessage] = 1;
+            projection[TableFields.senderDetails] = 1;
+            projection[TableFields.message] = 1;
+            projection[TableFields.messageType] = 1;
+            projection[TableFields.deleteForEveryone] = 1;
+            projection[TableFields.isEdited] = 1;
+            projection[TableFields.deleteForMe] = 1;
+            projection[TableFields.receivedBy] = 1;
+            projection[TableFields.seenBy] = 1;
+            projection[TableFields.reaction] = 1;
+            return this; 
+        };
+        this.withId = () => {
+            projection[TableFields.ID] = 1;
+            return this;
+        }
+        this.execute = async () => {
+            return await methodToExecute.call(projection);
+        }
+
     }
 }
 

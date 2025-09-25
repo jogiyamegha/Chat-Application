@@ -35,6 +35,22 @@ const messageSchema = new mongoose.Schema(
             enum : Object.values(MessageTypes),
             required : [true, ValidationMsgs.MessageTypeEmpty],
         },
+        [TableFields.deleteForEveryone] : {
+            type : Boolean,
+            default : false
+        },
+        [TableFields.isEdited] : {
+            type : Boolean,
+            default : false
+        },
+        [TableFields.deleteForMe] : [
+            {
+                [TableFields.userId] : {
+                    type : mongoose.Types.ObjectId,
+                    ref : TableNames.User
+                }
+            }
+        ],
         [TableFields.receivedBy] : [
             {
                 [TableFields.ID] : false,
@@ -57,14 +73,6 @@ const messageSchema = new mongoose.Schema(
             type : Number,
             enum : Object
         },
-        [TableFields.deleteForMe] : {
-            type : Boolean,
-            default : false
-        },
-        [TableFields.deleteForEveryone] : {
-            type : Boolean,
-            default : false
-        }        
     },
     {
         timestamps : true,

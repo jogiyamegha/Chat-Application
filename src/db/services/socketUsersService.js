@@ -71,7 +71,6 @@ const SocketUsersService = class {
 
      static updateRecord = async (existingId, socketId) => {
         try { 
-            console.log(socketId);
             await SocketUsers.findByIdAndUpdate(
                 existingId, 
                 { 

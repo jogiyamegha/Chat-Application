@@ -10,8 +10,6 @@ exports.verifySocketToken = async (socket) => {
     
     try {
         const decoded = jwt.verify(token, process.env.JWT_USER_PK);
-        // console.log(decoded);
-        // console.log(decoded[TableFields.ID]);
         return { decoded };
     } catch (err) {
         return { error: ValidationMsgs.AuthFail };

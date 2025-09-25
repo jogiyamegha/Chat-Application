@@ -133,7 +133,6 @@ const ChatRoomService = class {
     }
 
     static addToParticipantsArray = async (participant, groupId) => {
-        console.log("kanu");
         await ChatRoom.findByIdAndUpdate(
             groupId, 
             {
@@ -179,7 +178,6 @@ const ChatRoomService = class {
             }
 
             const userRemoved = removedParticipantsArray[participantIndex];
-            console.log("userRemoved ss", userRemoved);
 
             return await ChatRoom.updateOne(
                 {
@@ -211,7 +209,6 @@ const ChatRoomService = class {
         }
 
         const userRemoved = groupParticipant[participantIndex];
-        console.log(userRemoved);
 
         await ChatRoom.updateOne(
             {

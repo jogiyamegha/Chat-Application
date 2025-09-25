@@ -94,6 +94,7 @@ const TableFields = (function () {
     TableFields.reaction = 'reaction';
     TableFields.deleteForMe = 'deleteForMe';
     TableFields.deleteForEveryone = 'deleteForEveryone';
+    TableFields.isEdited = 'isEdited';
     TableFields.chatType = 'chatType';
     TableFields.isOnline = 'isOnline';
     TableFields.socketId = 'socketId';
@@ -143,7 +144,8 @@ const ValidationMsgs = (function () {
     ValidationMsgs.NotGroupMember = 'You can not send message as you are not group member';
     ValidationMsgs.IsGroupEmpty = 'group or not?';
     ValidationMsgs.NotGroup = 'it is not a group';
-    ValidationMsgs.ParticipantAlreadyExists = 'Participant AlreadyExists'
+    ValidationMsgs.ParticipantAlreadyExists = 'Participant AlreadyExists'; 
+    ValidationMsgs.MessageNotExists = 'Message Not Exists';
     return ValidationMsgs;
 })();
 
