@@ -24,6 +24,19 @@ const ChatRoomService = class {
         })
     } 
 
+    static getAllChatrooms = async (participantId) => {
+        // Query MongoDB for chat rooms where user is a participant
+        const chatRooms = await ChatRoom.find({
+            [TableFields.participants]: {
+                $elemMatch: { [TableFields.participantId]: participantId }
+            }
+        });
+
+        // Convert Mongoose documents to plain JSON
+        return chatRooms.map(room => room.toObject());
+    };
+
+
     static checkUserIsAdmin = async (chatRoomId ,userId) => {
         const chatRoom = await ChatRoomService.getChatRoomById(chatRoomId).withBasicInfo().execute();
         const participants = chatRoom[TableFields.participants];

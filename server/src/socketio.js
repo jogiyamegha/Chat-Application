@@ -437,6 +437,35 @@ module.exports = function (io) {
             }
         });
 
+        // socket.on('getAllChatrooms', async (ack) => {
+        //     try {
+        //         // console.log("hxjhxjx");
+        //         // // Verify token
+        //         // const { decoded, error } = await verifySocketToken(socket);
+        //         // if (error) {
+        //         //     socket.emit('authError', { success: false, error });
+        //         //     return ack({ success: false, error: 'Auth failed' });
+        //         // }
+
+        //         // console.log("here");
+
+        //         // const userId = decoded[TableFields.ID];
+        //         // console.log(userId);
+
+                
+        //         // const chatRooms = await ChatRoomController.getAllChatrooms(userId);
+        //         // socket.emit('allChatRooms', chatRooms);
+
+        //         // return ack({ success: true, chatRooms });
+
+        //         // return ChatRoom.find()
+
+        //     } catch (err) {
+        //         console.error(err);
+        //         return ack({ success: false, error: 'Server error' });
+        //     }
+        // })
+
         socket.on('onlineStatusChange', async (ack = () => { }) => {
             try {
                 const { decoded, error } = await verifySocketToken(socket);

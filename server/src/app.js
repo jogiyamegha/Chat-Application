@@ -6,22 +6,28 @@ const express = require('express');
 const { createServer } = require('node:http');
 const Util = require('./utils/util');
 const { Server } = require('socket.io');
+const cors = require('cors');
 
 const userRoutes = require('./routes/userRoutes');
 
 env.config({
-    path : './config/dev.env',
-})
+    path: './config/dev.env',
+});
 
 const app = express();
 
-app.use(express.json());
-app.use(express.urlencoded({extended : true, limit : '5gb', parameterLimit : 50000}));
-app.use(express.json({
-    limit : '5gb'
-}))
+// ✅ Enable CORS for frontend (Vite on port 5173)
+app.use(cors({
+    origin: "http://localhost:5173",   // frontend URL
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    credentials: true
+}));
 
-app.use('/uploads', express.static(path.join(__dirname, '../uploads'))); // to show image
+app.use(express.json());
+app.use(express.urlencoded({ extended: true, limit: '5gb', parameterLimit: 50000 }));
+app.use(express.json({ limit: '5gb' }));
+
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.use(userRoutes);
 
@@ -30,14 +36,19 @@ app.get("/", (req, res) => {
 });
 
 const server = createServer(app);
+
 const io = new Server(server, {
-    cors : { origin : '*', method : ['GET', 'POST', 'DELETE', 'PATCH', 'PUT']}
+    cors: {
+        origin: "http://localhost:5173",   // allow frontend socket connection too
+        methods: ["GET", "POST", "DELETE", "PATCH", "PUT"]
+    }
 });
+
 require('./socketio')(io);
 
 DBController.initConnection(async () => {
-    server.listen(process.env.PORT, async() => {
-        console.log(`server is connected on`, Util.getBaseURL(), process.env.PORT);
-    })
-})
-
+    const PORT = process.env.PORT || 8000;
+    server.listen(PORT, async () => {
+        console.log(`server is connected on`, Util.getBaseURL(), PORT);
+    });
+});

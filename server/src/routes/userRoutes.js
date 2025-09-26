@@ -1,6 +1,7 @@
 const API = require('../utils/apiBuilder');
 const AuthController = require('../controllers/User/authController');
 const UserController = require('../controllers/User/userController');
+const ChatRoomController = require('../controllers/ChatRoom/chatRoomController');
 const { TableFields } = require('../utils/constants');
 const ImageHandler = require('../middlewares/imageVerifier');
 const router = API.configRoute('/user')
@@ -28,6 +29,12 @@ const router = API.configRoute('/user')
 .asPOST(UserController.setGroupProfile)
 .useUserAuth()
 .userMiddlewares(ImageHandler.single([TableFields.image]))
+.build()
+
+
+.addPath('/all-chat-rooms')
+.asGET(ChatRoomController.getAllChatrooms)
+.useUserAuth()
 .build()
 
 .getRouter()

@@ -56,7 +56,7 @@ exports.login = async (req) => {
         const token = user.createAuthToken(InterfaceTypes.User.UserWeb);
         await UserService.saveAuthToken(user[TableFields.ID], token);
         console.log('Login Successfully!');
-        return { user, token};
+        return { user, token: token};
     } else throw new ValidationError(ValidationMsgs.UnableToLogin);
 }
 

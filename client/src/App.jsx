@@ -25,7 +25,7 @@
 // //         newSocket.on('connect', () => {
 // //             console.log('Connected to server');
 // //             setSocket(newSocket);
-            
+
 // //             // Create connection
 // //             newSocket.emit('createConnection', (response) => {
 // //             console.log('Connection created:', response);
@@ -164,62 +164,73 @@
 
 // export default App;
 
-
 // App.jsx
 import React, { useEffect, useState } from "react";
 import socket from "./socket";
-import { loginUser, logoutUser } from "./api";
+import { getToken, logoutUser } from "./api";
+import Login from "./components/Login"; 
+import ChatRoom from "./components/ChatRoom"; // assume you have this
 
 export default function App() {
-  const [user, setUser] = useState(null);
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function init() {
-      // 1️⃣ Login (you should replace with real credentials from a form)
-      const res = await loginUser("me@example.com", "mypassword");
-      setUser(res.user);
+    useEffect(() => {
+        const token = getToken();
 
-      // 2️⃣ Setup socket listeners
-      socket.on("connect", () => {
-        console.log("Connected with socket id:", socket.id);
-        socket.emit("createConnection");
-      });
+        if (!token) {
+            // No token, so force login
+            setLoading(false);
+            return;
+        }
 
-      socket.on("authError", (err) => {
-        console.error("Auth error:", err);
-      });
+        // Setup socket listeners only if token exists
+        socket.connect();
 
-      socket.on("connectionSuccess", (msg) => {
-        console.log(msg);
-      });
+        socket.on("connect", () => {
+            console.log("Connected with socket id:", socket.id);
+            socket.emit("createConnection");
+        });
 
-      return () => {
-        socket.off("connect");
-        socket.off("authError");
-        socket.off("connectionSuccess");
-      };
+        socket.on("authError", (err) => {
+            console.error("Auth error:", err);
+            handleLogout(); // auto-logout on error
+        });
+
+        socket.on("connectionSuccess", (msg) => {
+            console.log(msg);
+            // You can also set user data from server if needed
+        });
+
+        setLoading(false);
+
+        return () => {
+            socket.off("connect");
+            socket.off("authError");
+            socket.off("connectionSuccess");
+        };
+    }, []);
+
+    function handleLogout() {
+        logoutUser();
+        socket.disconnect();
+        setUser(null);
     }
 
-    init();
-  }, []);
+    if (loading) return <p>Loading...</p>;
 
-  function handleLogout() {
-    logoutUser();
-    socket.disconnect();
-    setUser(null);
-  }
-
-  return (
-    <div>
-      <h1>Chat App</h1>
-      {user ? (
-        <>
-          <p>Welcome, {user.name}</p>
-          <button onClick={handleLogout}>Logout</button>
-        </>
-      ) : (
-        <p>Logging in...</p>
-      )}
-    </div>
-  );
+    return (
+        <div>
+            <h1>Chat App</h1>
+            {getToken() ? (
+                <>
+                    <p>Welcome {user?.name || "User"}</p>
+                    <button onClick={handleLogout}>Logout</button>
+                    <ChatRoom />
+                </>
+            ) : (
+                <Login onLogin={setUser} />
+            )}
+        </div>
+    );
 }

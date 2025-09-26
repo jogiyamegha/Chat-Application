@@ -1,4 +1,4 @@
-const ChatRoom = require('../../db/models/chatRoom');
+const chatRoom = require('../../db/models/chatRoom');
 const ChatRoomService = require('../../db/services/chatRoomService');
 const MessageService = require('../../db/services/messageService');
 const UserService = require('../../db/services/userService');
@@ -37,6 +37,11 @@ exports.createChatRoom = async (userId, req) => {
     }
 }
 
+exports.getAllChatrooms = async (userId) => {
+    const chatRooms = await ChatRoomService.getAllChatrooms(userId);
+    return chatRooms; 
+};
+
 exports.addParticipantsToGroup = async (chatRoomId, req) => {
     const reqBody = req.body;
 
@@ -62,6 +67,7 @@ exports.addParticipantsToGroup = async (chatRoomId, req) => {
 
     }
 } 
+
 
 // exports.createGroup = async (userId, req) => {
 //     const reqBody = req.body;

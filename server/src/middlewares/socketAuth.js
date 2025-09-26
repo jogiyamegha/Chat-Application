@@ -1,13 +1,13 @@
 const jwt = require("jsonwebtoken");
-const { ValidationMsgs, TableFields } = require("../utils/constants");
-const SocketUsersService = require('../db/services/socketUsersService');
- 
+const { ValidationMsgs } = require("../utils/constants");
+
 exports.verifySocketToken = async (socket) => {
-    const token = socket.handshake.query.token;
+    // Read token from socket.io-client auth object
+    const token = socket.handshake.auth?.token;
     if (!token) {
         return { error: "Token missing" };
     }
-    
+
     try {
         const decoded = jwt.verify(token, process.env.JWT_USER_PK);
         return { decoded };
