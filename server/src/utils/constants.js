@@ -67,6 +67,7 @@ const TableFields = (function () {
     TableFields.createdBy = 'createdBy';
     TableFields.personalChatRoomDetails = 'personalChatRoomDetails';
     TableFields.receiverId = 'receiverId';
+    TableFields.receiverName = 'receiverName';
     TableFields.groupDetails = 'groupDetails';
     TableFields.groupName = 'groupName';
     TableFields.description = 'description';

@@ -429,6 +429,8 @@ module.exports = function (io) {
                 const userId = decoded[TableFields.ID];
                 const socketId = socket.id;
 
+                console.log("userId");
+
                 await SocketUsersController.createSocketUser(userId, socketId);
                 return ack({ success: true, message: 'Connected successfully!' });
             } catch (err) {
@@ -437,34 +439,28 @@ module.exports = function (io) {
             }
         });
 
-        // socket.on('getAllChatrooms', async (ack) => {
-        //     try {
-        //         // console.log("hxjhxjx");
-        //         // // Verify token
-        //         // const { decoded, error } = await verifySocketToken(socket);
-        //         // if (error) {
-        //         //     socket.emit('authError', { success: false, error });
-        //         //     return ack({ success: false, error: 'Auth failed' });
-        //         // }
+        socket.on ('getAllUsers', async (ack) => {
+            try {
+                const allUsers = await UserController.getAllUsers()
+                return ack({success : true, users : allUsers});
+            } catch (error) {
+                console.log(error);
+                return ack({ success: false})
+            }
+        })
 
-        //         // console.log("here");
+        socket.on('getAllChatrooms', async (ack) => {
+            try {
+                const userId = decoded[TableFields.ID];
 
-        //         // const userId = decoded[TableFields.ID];
-        //         // console.log(userId);
-
-                
-        //         // const chatRooms = await ChatRoomController.getAllChatrooms(userId);
-        //         // socket.emit('allChatRooms', chatRooms);
-
-        //         // return ack({ success: true, chatRooms });
-
-        //         // return ChatRoom.find()
-
-        //     } catch (err) {
-        //         console.error(err);
-        //         return ack({ success: false, error: 'Server error' });
-        //     }
-        // })
+                const chatRooms = await ChatRoomController.getAllChatrooms(userId); 
+                // return chatRooms
+                return ack({ success: true, chatRooms }); 
+            } catch (err) {
+                console.error('[getAllChatrooms] error:', err);
+                return ack({ success: false, error: err.message });
+            }
+        })
 
         socket.on('onlineStatusChange', async (ack = () => { }) => {
             try {

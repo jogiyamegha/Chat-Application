@@ -16,6 +16,7 @@ exports.createChatRoom = async (userId, req) => {
             reqBody,
             undefined,
             async (updatedGroupFields) => {
+                console.log("here");
                 return await ChatRoomService.insertGroupRecord(
                     updatedGroupFields
                 );
@@ -38,7 +39,7 @@ exports.createChatRoom = async (userId, req) => {
 }
 
 exports.getAllChatrooms = async (userId) => {
-    const chatRooms = await ChatRoomService.getAllChatrooms(userId);
+    const chatRooms = await ChatRoomService.getAllChatrooms(userId).withBasicInfo().execute()
     return chatRooms; 
 };
 
@@ -301,12 +302,15 @@ async function parseAndValidatePersonalChat (
     );
 
     const participantId = reqBody[TableFields.participants];
+
+    const receiver = await UserService.getUserById(reqBody[TableFields.receiverId]).withBasicInfo().execute();
     try {
         let response = await onValidationCompleted({
             [TableFields.isGroup] : reqBody[TableFields.isGroup],
             [TableFields.personalChatRoomDetails] : {
                 [TableFields.userId] : userId,
-                [TableFields.receiverId] : reqBody[TableFields.receiverId]
+                [TableFields.receiverId] : reqBody[TableFields.receiverId],
+                [TableFields.receiverName] : receiver[TableFields.name_]
             },
             [TableFields.groupDetails] : {},
             [TableFields.participants] : uniqueParticipants

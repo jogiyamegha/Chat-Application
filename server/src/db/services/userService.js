@@ -16,6 +16,12 @@ class UserService {
         })
     }
 
+    static listAllUsers = () => {
+        return new ProjectionBuilder(async function() {
+            return await User.find()
+        })
+    }
+
     static addJoinedAtToUser = async (groupId, id, value) => {
         await User.findByIdAndUpdate(
             {

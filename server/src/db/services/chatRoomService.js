@@ -24,16 +24,16 @@ const ChatRoomService = class {
         })
     } 
 
-    static getAllChatrooms = async (participantId) => {
-        // Query MongoDB for chat rooms where user is a participant
-        const chatRooms = await ChatRoom.find({
-            [TableFields.participants]: {
-                $elemMatch: { [TableFields.participantId]: participantId }
-            }
-        });
-
-        // Convert Mongoose documents to plain JSON
-        return chatRooms.map(room => room.toObject());
+    static getAllChatrooms =  (participantId) => {
+        return new ProjectionBuilder(async function () {
+            return await ChatRoom.find({
+                [TableFields.participants] : { 
+                    $elemMatch : {
+                        [TableFields.userId] : participantId
+                    }
+                }
+            })
+        })
     };
 
 

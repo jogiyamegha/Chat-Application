@@ -1,0 +1,185 @@
+/* Container */
+.chatroomContainer {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+  background: #f9fafb;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  min-height: 80vh;
+}
+
+/* Title */
+.chatroomTitle {
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 1.2rem;
+  text-align: center;
+}
+
+/* New Chat Button */
+.newChatButton {
+  align-self: flex-end;
+  padding: 0.6rem 1rem;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  margin-bottom: 1rem;
+}
+.newChatButton:hover {
+  background: #1e40af;
+}
+
+/* Chatroom List */
+.chatroomList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.chatroomItem {
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  transition: background 0.2s ease;
+  cursor: pointer;
+}
+.chatroomItem:hover {
+  background: #f3f4f6;
+}
+.chatName {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+.chatMessage {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-top: 0.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Empty state + Loading */
+.noChat,
+.loading {
+  text-align: center;
+  font-size: 1rem;
+  color: #6b7280;
+  padding: 2rem 0;
+}
+
+/* Modal */
+.modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 50;
+}
+.modalContent {
+  background: #fff;
+  border-radius: 12px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  animation: scaleIn 0.25s ease;
+}
+@keyframes scaleIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Buttons */
+.createButton,
+.cancelButton {
+  display: inline-block;
+  padding: 0.6rem 1rem;
+  margin: 0.4rem 0.2rem;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.createButton {
+  background: #10b981;
+  color: #fff;
+  border: none;
+}
+.createButton:hover {
+  background: #059669;
+}
+.cancelButton {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+.cancelButton:hover {
+  background: #e5e7eb;
+}
+
+/* Input */
+.input {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+.input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.2);
+}
+
+/* User List */
+.userList {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.6rem;
+  margin-bottom: 1rem;
+}
+.userItem {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+  cursor: pointer;
+}
+.userItem:hover {
+  background: #f9fafb;
+}
+.userItem input {
+  margin-right: 0.6rem;
+}
+
+/* Responsiveness */
+@media (max-width: 768px) {
+  .chatroomContainer {
+    padding: 1rem;
+    min-height: auto;
+  }
+  .chatroomTitle {
+    font-size: 1.4rem;
+  }
+  .chatroomItem {
+    padding: 0.8rem;
+  }
+}
+
+ 

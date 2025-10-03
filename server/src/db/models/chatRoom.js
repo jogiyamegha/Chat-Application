@@ -17,6 +17,10 @@ const chatRoomSchema = new mongoose.Schema(
             [TableFields.receiverId] : {
                 type : mongoose.Types.ObjectId,
                 ref : TableNames.User
+            },
+            [TableFields.receiverName] : {
+                type : String,
+                trim : true
             }
         },
         [TableFields.groupDetails] : {

@@ -1,236 +1,67 @@
-// // App.js
-// // import React, { useState, useEffect } from 'react';
-// // import { io } from 'socket.io-client';
-// // import ChatRoom from './components/ChatRoom';
-// // import Chat from './components/Chat';
-// // // import LoginForm from './components/LoginForm';
-// // import './App.css';
-
-// // const App = () => {
-// //     const [socket, setSocket] = useState(null);
-// //     const [user, setUser] = useState(null);
-// //     const [selectedChatRoom, setSelectedChatRoom] = useState(null);
-// //     const [chatRooms, setChatRooms] = useState([]);
-// //     const [isOnline, setIsOnline] = useState(false);
-// //     const [messages, setMessages] = useState({});
-
-// //     useEffect(() => {
-// //         if (user && user.token) {
-// //         const newSocket = io('http://localhost:8000', {
-// //             auth: {
-// //                 token: user.token
-// //             }
-// //         });
-
-// //         newSocket.on('connect', () => {
-// //             console.log('Connected to server');
-// //             setSocket(newSocket);
-
-// //             // Create connection
-// //             newSocket.emit('createConnection', (response) => {
-// //             console.log('Connection created:', response);
-// //             });
-// //         });
-
-// //         newSocket.on('connectionSuccess', (message) => {
-// //             console.log(message);
-// //             newSocket.emit('onlineStatusChange', {}, (response) => {
-// //                 if (response.success) {
-// //                     setIsOnline(true);
-// //                 }
-// //             });
-// //         });
-
-// //         newSocket.on('authError', (error) => {
-// //             console.error('Auth error:', error);
-// //             setUser(null);
-// //         });
-
-// //         newSocket.on('onlineErr', (message) => {
-// //             console.error('Online error:', message);
-// //             setIsOnline(false);
-// //         });
-
-// //         newSocket.on('messageReceived', (data) => {
-// //             console.log('Message received:', data);
-// //             // Update messages for the current chat room
-// //             if (selectedChatRoom) {
-// //             setMessages(prev => ({
-// //                 ...prev,
-// //                 [selectedChatRoom.id]: [...(prev[selectedChatRoom.id] || []), data.message]
-// //             }));
-// //             }
-// //         });
-
-// //         newSocket.on('chatHistory', (history) => {
-// //             console.log('Chat history:', history);
-// //             if (selectedChatRoom) {
-// //             setMessages(prev => ({
-// //                 ...prev,
-// //                 [selectedChatRoom.id]: history
-// //             }));
-// //             }
-// //         });
-
-// //         return () => {
-// //             newSocket.close();
-// //         };
-// //         }
-// //     }, [user]);
-
-// //     // const handleLogin = (userData) => {
-// //     //     setUser(userData);
-// //     // };
-
-// //     const handleLogout = () => {
-// //         if (socket) {
-// //         socket.close();
-// //         }
-// //         setUser(null);
-// //         setSocket(null);
-// //         setSelectedChatRoom(null);
-// //         setChatRooms([]);
-// //         setMessages({});
-// //         setIsOnline(false);
-// //     };
-
-// //     const handleSelectChatRoom = (chatRoom) => {
-// //         setSelectedChatRoom(chatRoom);
-// //         // Load chat history
-// //         if (socket) {
-// //             socket.emit('showChatRoomMessage', { chatRoomId: chatRoom.id });
-// //         }
-// //     };
-
-// //     // if (!user) {
-// //     //     return <LoginForm onLogin={handleLogin} />;
-// //     // }
-
-// //     return (
-// //         <div className="app">
-// //             <div className="app-container">
-// //                 <ChatRoom
-// //                     chatRooms={chatRooms}
-// //                     selectedChatRoom={selectedChatRoom}
-// //                     onSelectChatRoom={handleSelectChatRoom}
-// //                     user={user}
-// //                     socket={socket}
-// //                     isOnline={isOnline}
-// //                     onLogout={handleLogout}
-// //                 />
-// //                 <Chat
-// //                     selectedChatRoom={selectedChatRoom}
-// //                     messages={messages[selectedChatRoom?.id] || []}
-// //                     socket={socket}
-// //                     user={user}
-// //                     isOnline={isOnline}
-// //                 />
-// //             </div>
-// //         </div>
-// //     );
-// // };
-
-// // export default App;
-
-// import React, { useEffect, useState } from "react";
-// import ChatRoom from "./components/ChatRoom";
-// import socket from "./socket";
-
-// function App() {
-//     const [isConnected, setIsConnected] = useState(false);
-
-//     useEffect(() => {
-//         socket.on("connect", () => setIsConnected(true));
-//         socket.on("disconnect", () => setIsConnected(false));
-
-//         return () => {
-//             socket.off("connect");
-//             socket.off("disconnect");
-//         };
-
-//     }, []);
-
-//     return (
-//         <>
-//         {isConnected ? (
-//             // <ChatRoom socket={socket} />
-//             <ChatRoom />
-//         ) : (
-//             <p>Connecting to server...</p>
-//         )}
-//         </>
-//     );
-// }
-
-// export default App;
-
-// App.jsx
 import React, { useEffect, useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import socket from "./socket";
 import { getToken, logoutUser } from "./api";
-import Login from "./components/Login"; 
-import ChatRoom from "./components/ChatRoom"; // assume you have this
+import Login from "./components/Login";
+import ChatRoom from "./components/ChatRoom";
+import { clearUser } from "./redux/features/userSlice";
 
 export default function App() {
-    const [user, setUser] = useState(null);
+    const user = useSelector((state) => state.user.user); // Redux state
+    const dispatch = useDispatch();
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const token = getToken();
+    const token = getToken();
 
+    useEffect(() => {
         if (!token) {
-            // No token, so force login
             setLoading(false);
             return;
         }
 
-        // Setup socket listeners only if token exists
-        socket.connect();
+        if (!socket.connected) socket.connect();
 
-        socket.on("connect", () => {
-            console.log("Connected with socket id:", socket.id);
-            socket.emit("createConnection");
-        });
-
-        socket.on("authError", (err) => {
+        const handleConnect = () => console.log("Connected with socket id:", socket.id);
+    
+        const handleAuthError = (err) => {
             console.error("Auth error:", err);
-            handleLogout(); // auto-logout on error
-        });
+            // handleLogout();
+        };
+        const handleConnectionSuccess = (msg) => console.log(msg);
 
-        socket.on("connectionSuccess", (msg) => {
-            console.log(msg);
-            // You can also set user data from server if needed
-        });
+        socket.on("connect", handleConnect);
+        socket.on("authError", handleAuthError);
+        socket.on("connectionSuccess", handleConnectionSuccess);
 
         setLoading(false);
-
         return () => {
-            socket.off("connect");
-            socket.off("authError");
-            socket.off("connectionSuccess");
+            socket.off("connect", handleConnect);
+            socket.off("authError", handleAuthError);
+            socket.off("connectionSuccess", handleConnectionSuccess);
         };
-    }, []);
+    }, [token]);
 
-    function handleLogout() {
+    const handleLogout = () => {
         logoutUser();
         socket.disconnect();
-        setUser(null);
-    }
+        dispatch(clearUser());
+    };
 
     if (loading) return <p>Loading...</p>;
 
     return (
         <div>
-            <h1>Chat App</h1>
-            {getToken() ? (
-                <>
-                    <p>Welcome {user?.name || "User"}</p>
-                    <button onClick={handleLogout}>Logout</button>
-                    <ChatRoom />
-                </>
-            ) : (
-                <Login onLogin={setUser} />
-            )}
+        <h1>Chat App</h1>
+
+        {token && user ? (
+            <>
+            <p>Welcome {user.name || "User"}</p>
+            <button onClick={handleLogout}>Logout</button>
+            <ChatRoom />
+            </>
+        ) : (
+            <Login />
+        )}
         </div>
     );
 }

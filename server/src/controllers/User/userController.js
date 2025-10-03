@@ -3,6 +3,10 @@ const ChatRoomService = require('../../db/services/chatRoomService');
 const { TableFields, ValidationMsgs } = require('../../utils/constants');
 const ValidationError = require('../../utils/ValidationError');
 
+exports.getAllUsers = async (req) => {
+    return await UserService.listAllUsers().withBasicInfo().execute()
+}
+
 exports.removeParticipantsFromGroup = async (req) => {
     const reqBody = req.body;
     const chatRoomId = reqBody.chatRoomId;
